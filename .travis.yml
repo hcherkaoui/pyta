@@ -5,7 +5,7 @@ python:
 
 install:
   # pyta dependencies
-  - pip install 'joblib>=0.11' 'numpy>=1.14.0' 'scipy>=1.0.0' 'nibabel>=2.3.2' 'matplotlib>=2.1.2'
+  - pip install 'joblib>=0.11' 'numpy>=1.14.0' 'scipy>=1.0.0' 'nibabel>=2.3.2' 'matplotlib>=2.1.2' 'numba>=0.40.1'
   - pip install -e .
 
   # testing dependencies

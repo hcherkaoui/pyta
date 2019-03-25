@@ -35,6 +35,7 @@ Dependencies
 ============
 
 * numpy >= 1.14.0
+* numba >= 0.40.1
 * scipy >= 1.0.0
 * joblib >= 0.11
 * nibabel >= 2.3.2
@@ -46,7 +47,7 @@ Install
 
 In order to perform the installation, run the following command from the pyTA directory::
 
-    pip install -r 'numpy>=1.14.0' 'scipy>=1.0.0' 'joblib>=0.11' 'matplotlib>=2.1.2'
+    pip install -r 'numpy>=1.14.0' 'scipy>=1.0.0' 'joblib>=0.11' 'matplotlib>=2.1.2' 'numba>=0.40.1'
     python setup.py install --user
 
 

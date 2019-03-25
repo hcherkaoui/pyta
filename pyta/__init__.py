@@ -89,7 +89,7 @@ def prox_t(Y, t_r, lbda, lbda_type='ratio', h=None, len_h=None,
             s = 0.1  # 10% of sparsity for z
             n = int(s * len(z))
             mask = np.zeros_like(z, dtype=int)
-            mask_ = np.argpartition(z, -n)[-n:]
+            mask_ = np.argpartition(np.abs(z), -n)[-n:]
             mask[mask_] = 1
             l_mask_support.append(mask)
         list_z = Parallel(n_jobs=n_jobs)(delayed(_prox_t)(
