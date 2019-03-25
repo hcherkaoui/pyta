@@ -31,7 +31,7 @@ def test_gradient():
 
     def grad(x):
         # global: y, hth, hty
-        return _grad_t(x, hth, hty, h)
+        return _grad_t(x, hth, hty)
 
     def approx_grad(x):
         return approx_fprime(x, _obj_t, 1.0e-12, y, h, 0.0)
@@ -70,7 +70,7 @@ def test_fista_decrease(momentum, step_size, max_iter):
 
     def grad(x):
         # global: y, hth, hty
-        return _grad_t(x, hth, hty, h=h)
+        return _grad_t(x, hth, hty)
 
     def obj(x):
         # global: y, h, lbda
@@ -157,7 +157,7 @@ def test_prefect_recover(momentum, step_size):
 
     if step_size == '1/Lipsch':
         def AtA(x):
-            return _grad_t(x, hth, hty=None, h=h)
+            return _grad_t(x, hth, hty=None)
         step_size = 0.9 / estimate_Lipsch_cst(AtA, n_times_valid)
 
     solver_kwargs = dict(max_iter=100, step_size=step_size,

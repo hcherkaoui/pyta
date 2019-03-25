@@ -4,19 +4,31 @@
 # License: new BSD
 
 import numpy as np
+import numba
 
 
-def _grad_t(x, hth, hty=None, h=None):
+@numba.jit((numba.float64[:], numba.float64[:], numba.int64), cache=True,
+           nopython=True)
+def hth_(hth, x, n):
+    """
+    """
+    hth_x = np.empty(n)
+    for t in range(n):
+        hth_x[t] = np.sum(hth * x[t: t + len(hth)])
+    return hth_x
+
+
+def _grad_t(x, hth, hty=None):
     """ Gradient for the temporal prox for one voxels.
     """
-    x = np.cumsum(x)
-    grad = np.empty_like(x)
-    # TODO debug this to reduce computation
-    # for t in range(len(x) - len(hth) + 1):
-    #     grad[t] = np.sum(hth * x[t: t + len(hth)])
-    grad = np.convolve(h[::-1], np.convolve(h, x), mode='valid')
+    Lx = np.r_[np.zeros(int(len(hth)/2)),
+               np.cumsum(x),
+               np.zeros(int(len(hth)/2))]
+    grad = hth_(hth, Lx, len(x))
+
     if hty is not None:
         grad -= hty
+
     return np.cumsum(grad[::-1])[::-1]
 
 

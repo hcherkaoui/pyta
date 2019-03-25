@@ -25,12 +25,12 @@ def _prox_t(y, lbda, h, freeze_support=False, mask_support=None,
 
         def _grad(x):
             # global: y, hth, hty
-            return mask_support * _grad_t(x, hth, hty, h)
+            return mask_support * _grad_t(x, hth, hty)
 
     else:
         def _grad(x):
             # global: y, hth, hty
-            return _grad_t(x, hth, hty, h)
+            return _grad_t(x, hth, hty)
 
     def _obj(x):
         # global: y, h, lbda
