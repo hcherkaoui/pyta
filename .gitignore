@@ -11,6 +11,7 @@
 .DS_Store
 .cache
 build
+__pycache__
 
 # ignore example results
 results_*
