@@ -19,8 +19,8 @@ from pyta.data import little_brain
 print(__doc__)
 
 d = datetime.now()
-root_outdir = 'results_{0}{1}{2}{3}{4}'.format(d.year, d.month, d.day,
-                                               d.hour, d.minute)
+root_outdir = 'results_simu_{0}{1}{2}{3}{4}'.format(d.year, d.month, d.day,
+                                                    d.hour, d.minute)
 if not os.path.exists(root_outdir):
     os.makedirs(root_outdir)
 
@@ -52,7 +52,7 @@ input_snr = 20 * np.log10(snr_num / snr_deno)
 
 print("-"*80)
 print("Input 4D fMRI data has dimension of: {0}".format(Y.shape))
-print("Input SNR of {0}dB".format(input_snr))
+print("Input SNR of {0:.2f}dB".format(input_snr))
 
 ###########################################################################
 # Parameters definition
@@ -92,19 +92,19 @@ print("runtime: {0}".format(timedelta(seconds=delta_t)))
 nx, ny, nz, N = est_AR_s.shape
 
 voxels_of_interest = [
-            [int(0.15*nx), int(0.5*ny), int(0.5*nz), slice(None)],  # c1
-            [int(0.65*nx), int(0.15*ny), int(0.5*nz), slice(None)],  # c2
-            [int(0.65*nx), int(0.65*ny), int(0.25*nz), slice(None)],  # c3
-            [int(0.65*nx), int(0.65*ny), int(0.75*nz), slice(None)],  # c4
-            [int(0.3*nx), int(0.15*ny), int(0.5*nz), slice(None)],  # b12
-            [int(0.65*nx), int(0.3*ny), int(0.25*nz), slice(None)],  # b23
-            [int(0.65*nx), int(0.3*ny), int(0.75*nz), slice(None)],  # b24
-            [int(0.65*nx), int(0.65*ny), int(0.5*nz), slice(None)],  # b34
-            [int(0.3*nx), int(0.3*ny), nz-1, slice(None)],  # i124
-            [int(0.3*nx), int(0.3*ny), int(0.5*nz), slice(None)],  # i1234
-            [int(0.3*nx), int(0.3*ny), 0, slice(None)],  # i123
-            [0, 0, 0, slice(None)],  # f1
-            [nx-1, ny-1, nz-1, slice(None)],  # f4
+            (int(0.15*nx), int(0.5*ny), int(0.5*nz), slice(None)),  # c1
+            (int(0.65*nx), int(0.15*ny), int(0.5*nz), slice(None)),  # c2
+            (int(0.65*nx), int(0.65*ny), int(0.25*nz), slice(None)),  # c3
+            (int(0.65*nx), int(0.65*ny), int(0.75*nz), slice(None)),  # c4
+            (int(0.3*nx), int(0.15*ny), int(0.5*nz), slice(None)),  # b12
+            (int(0.65*nx), int(0.3*ny), int(0.25*nz), slice(None)),  # b23
+            (int(0.65*nx), int(0.3*ny), int(0.75*nz), slice(None)),  # b24
+            (int(0.65*nx), int(0.65*ny), int(0.5*nz), slice(None)),  # b34
+            (int(0.3*nx), int(0.3*ny), nz-1, slice(None)),  # i124
+            (int(0.3*nx), int(0.3*ny), int(0.5*nz), slice(None)),  # i1234
+            (int(0.3*nx), int(0.3*ny), 0, slice(None)),  # i123
+            (0, 0, 0, slice(None)),  # f1
+            (nx-1, ny-1, nz-1, slice(None)),  # f4
                         ]
 name_of_interest = ["center region 1",
                     "center region 2",
@@ -129,13 +129,13 @@ if not os.path.exists(outdir_plots):
 for i, voxel in enumerate(voxels_of_interest):
     fig = plt.figure(i, figsize=(20, 10))
 
-    noisy_ar_s = noisy_AR_s[tuple(voxel)]
-    ar_s = AR_s[tuple(voxel)]
-    est_ar_s = est_AR_s[tuple(voxel)]
-    ai_s = AI_s[tuple(voxel)]
-    est_ai_s = est_AI_s[tuple(voxel)]
-    i_s = I_s[tuple(voxel)]
-    est_i_s = est_I_s[tuple(voxel)]
+    noisy_ar_s = noisy_AR_s[voxel]
+    ar_s = AR_s[voxel]
+    est_ar_s = est_AR_s[voxel]
+    ai_s = AI_s[voxel]
+    est_ai_s = est_AI_s[voxel]
+    i_s = I_s[voxel]
+    est_i_s = est_I_s[voxel]
 
     ax1 = fig.add_subplot(311)
     ax1.plot(noisy_ar_s, '-y', label="noisy AR signal")

@@ -1,6 +1,6 @@
 .. -*- mode: rst -*-
 
-|Travis|_ |Codecov|_ |Python27|
+|Travis|_ |Codecov|_ |Python27| |Python35|
 
 
 .. |Travis| image:: https://travis-ci.com/CherkaouiHamza/pyta.svg?branch=master
@@ -11,6 +11,9 @@
 
 .. |Python27| image:: https://img.shields.io/badge/python-2.7-blue.svg
 .. _Python27: https://badge.fury.io/py/scikit-learn
+
+.. |Python35| image:: https://img.shields.io/badge/python-3.5-blue.svg
+.. _Python35: https://badge.fury.io/py/scikit-learn
 
 
 pyTA
@@ -28,7 +31,7 @@ Important links
 ===============
 
 - Official source code repo: https://github.com/CherkaouiHamza/pyta
-- Original Matlab implementation done by F. I. Karahanoglu: https://miplab.epfl.ch/index.php/software/total-activation
+- Original Matlab implementation: https://miplab.epfl.ch/index.php/software/total-activation
 
 
 Dependencies

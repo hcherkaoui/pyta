@@ -91,21 +91,15 @@ def little_brain(tr=1.0, nx=10, ny=10, nz=10, N=200, snr=1.0, h=None,
     # regions definition
     if nx < 3 or ny < 3 or nz < 3 or N < 100:
         raise ValueError("nx, ny, nz should be at least 3 and N at least 100.")
-    region1 = [slice(0, int(0.3*nx)),
-               slice(0, ny),
-               slice(0, nz)]
-    region2 = [slice(int(0.3*nx), nx),
-               slice(0, int(0.3*ny)),
-               slice(0, nz)]
-    region3 = [slice(int(0.3*nx), nx),
-               slice(int(0.3*ny), ny),
-               slice(0, int(0.5*nz))]
-    region4 = [slice(int(0.3*nx), nx),
-               slice(int(0.3*ny), ny),
-               slice(int(0.5*nz), nz)]
+    m1 = [slice(0, int(0.3*nx)), slice(0, ny), slice(0, nz)]
+    m2 = [slice(int(0.3*nx), nx), slice(0, int(0.3*ny)), slice(0, nz)]
+    m3 = [slice(int(0.3*nx), nx), slice(int(0.3*ny), ny),
+          slice(0, int(0.5*nz))]
+    m4 = [slice(int(0.3*nx), nx), slice(int(0.3*ny), ny),
+          slice(int(0.5*nz), nz)]
 
     # signals generation
-    regions = [region1, region2, region3, region4]
+    regions = [m1, m2, m3, m4]
     if h is None:
         n_times_atom = 30
         h = spm_hrf(tr, n_times_atom)
@@ -113,27 +107,27 @@ def little_brain(tr=1.0, nx=10, ny=10, nz=10, N=200, snr=1.0, h=None,
     Lz = np.zeros((nx, ny, nz, N))
     x = np.zeros((nx, ny, nz, N + len(h) - 1))
     y = np.zeros((nx, ny, nz, N + len(h) - 1))
-    x[region1], Lz[region1], z[region1] = gen_random_events(
+    x[tuple(m1)], Lz[tuple(m1)], z[tuple(m1)] = gen_random_events(
                                         N, h, tr=tr, nb_events=21, avg_dur=1,
                                         var_dur=0, random_state=random_state)
-    x[region2], Lz[region2], z[region2] = gen_random_events(
+    x[tuple(m2)], Lz[tuple(m2)], z[tuple(m2)] = gen_random_events(
                                         N, h, tr=tr, nb_events=7, avg_dur=1,
                                         var_dur=1, random_state=random_state)
-    x[region3], Lz[region3], z[region3] = gen_random_events(
+    x[tuple(m3)], Lz[tuple(m3)], z[tuple(m3)] = gen_random_events(
                                         N, h, tr=tr, nb_events=4, avg_dur=12,
                                         var_dur=2, random_state=random_state)
-    x[region4], Lz[region4], z[region4] = gen_random_events(
+    x[tuple(m4)], Lz[tuple(m4)], z[tuple(m4)] = gen_random_events(
                                         N, h, tr=tr, nb_events=5, avg_dur=12,
                                         var_dur=2, middle_spike=True,
                                         random_state=random_state)
-    y[region1], noise1, _ = add_gaussian_noise(
-                                x[region1], snr=snr, random_state=random_state)
-    y[region2], noise2, _ = add_gaussian_noise(
-                                x[region2], snr=snr, random_state=random_state)
-    y[region3], noise3, _ = add_gaussian_noise(
-                                x[region3], snr=snr, random_state=random_state)
-    y[region4], noise4, _ = add_gaussian_noise(
-                                x[region4], snr=snr, random_state=random_state)
+    y[tuple(m1)], noise1, _ = add_gaussian_noise(
+                              x[tuple(m1)], snr=snr, random_state=random_state)
+    y[tuple(m2)], noise2, _ = add_gaussian_noise(
+                              x[tuple(m2)], snr=snr, random_state=random_state)
+    y[tuple(m3)], noise3, _ = add_gaussian_noise(
+                              x[tuple(m3)], snr=snr, random_state=random_state)
+    y[tuple(m4)], noise4, _ = add_gaussian_noise(
+                              x[tuple(m4)], snr=snr, random_state=random_state)
 
     # Add description
     descr = ("The software phantom contains 4 regions in a cube that consists "
@@ -151,10 +145,10 @@ def little_brain(tr=1.0, nx=10, ny=10, nz=10, N=200, snr=1.0, h=None,
              "obtain the BOLD activity for each region. Each voxel time series"
              " was then corrupted with i.i.d. Gaussian noise such that voxel "
              "time series had SNR of 10 dB.").format(nx, ny, nz)
-    snr1 = norm_2(x[region1]) / (norm_2(noise1) + np.finfo(np.float).eps)
-    snr2 = norm_2(x[region2]) / (norm_2(noise2) + np.finfo(np.float).eps)
-    snr3 = norm_2(x[region3]) / (norm_2(noise3) + np.finfo(np.float).eps)
-    snr4 = norm_2(x[region4]) / (norm_2(noise4) + np.finfo(np.float).eps)
+    snr1 = norm_2(x[tuple(m1)]) / (norm_2(noise1) + np.finfo(np.float).eps)
+    snr2 = norm_2(x[tuple(m2)]) / (norm_2(noise2) + np.finfo(np.float).eps)
+    snr3 = norm_2(x[tuple(m3)]) / (norm_2(noise3) + np.finfo(np.float).eps)
+    snr4 = norm_2(x[tuple(m4)]) / (norm_2(noise4) + np.finfo(np.float).eps)
     list_snr = [np.round(20.0 * np.log10(snr1), 3),
                 np.round(20.0 * np.log10(snr2), 3),
                 np.round(20.0 * np.log10(snr3), 3),
