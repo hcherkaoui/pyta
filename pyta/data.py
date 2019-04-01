@@ -7,7 +7,7 @@ import numpy as np
 from numpy.linalg import norm as norm_2
 import nibabel as nib
 
-from .hrf import spm_hrf
+from .utils import spm_hrf
 
 
 def gen_random_events(N, h, nb_events=4, avg_dur=5, var_dur=1,

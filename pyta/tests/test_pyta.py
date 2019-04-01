@@ -9,11 +9,9 @@ import matplotlib.pyplot as plt
 from scipy.optimize import approx_fprime
 
 from pyta import _prox_t
-from pyta.loss_grad import _obj_t, _grad_t
-from pyta.prox import _soft_th
-from pyta.utils import estimate_Lipsch_cst
-from pyta.hrf import spm_hrf
-from pyta.opt import fista
+from pyta.utils import (estimate_Lipsch_cst, spm_hrf, fista, _soft_th, _obj_t,
+                        _grad_t)
+
 
 
 def test_gradient():
