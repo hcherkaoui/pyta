@@ -22,7 +22,7 @@
 from distutils.version import LooseVersion
 
 
-__version__ = '0.0.0'
+__version__ = '0.0.1'
 _PYTA_INSTALL_MSG = "See {0} for installation information.".format(
                     'https://github.com/CherkaouiHamza/pyta')
 
@@ -44,6 +44,14 @@ REQUIRED_MODULE_METADATA = (
         'install_info': _PYTA_INSTALL_MSG}),
     ('nibabel', {
         'min_version': '0.3.2',
+        'required_at_installation': True,
+        'install_info': _PYTA_INSTALL_MSG}),
+    ('numba', {
+        'min_version': '0.40.1',
+        'required_at_installation': True,
+        'install_info': _PYTA_INSTALL_MSG}),
+    ('prox_tv', {
+        'min_version': '0.0.0',  # version not propperly set by the maintainer
         'required_at_installation': True,
         'install_info': _PYTA_INSTALL_MSG}),
     ('matplotlib', {

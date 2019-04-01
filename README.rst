@@ -18,8 +18,8 @@
 
 pyTA
 ====
-py Total Activation (pyTA) implements the temporal proximal operator of the
-Total Activation approach (ie deconvolution via a total variation constraint
+py Total Activation (pyTA) implements the Total Activation approach
+(ie deconvolution via a spatial and temporal total variation constraint
 for fMRI data).
 
  [1] F. I. Karahanoglu, C. Caballero Gaudes, F. Lazeyras, D. Van De Ville,
@@ -42,6 +42,7 @@ Dependencies
 * scipy >= 1.0.0
 * joblib >= 0.11
 * nibabel >= 2.3.2
+* prox_tv
 * matplotlib >= 2.1.2 (for examples)
 
 
@@ -50,7 +51,7 @@ Install
 
 In order to perform the installation, run the following command from the pyTA directory::
 
-    pip install -r 'numpy>=1.14.0' 'scipy>=1.0.0' 'joblib>=0.11' 'matplotlib>=2.1.2' 'numba>=0.40.1'
+    pip install -r 'joblib>=0.11' 'numpy>=1.14.0' 'scipy>=1.0.0' 'nibabel>=2.3.2' 'matplotlib>=2.1.2' 'numba>=0.40.1' 'prox_tv
     python setup.py install --user
 
 

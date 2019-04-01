@@ -71,9 +71,9 @@ if __name__ == "__main__":
               'Topic :: Scientific/Engineering',
               'Operating System :: POSIX',
               'Operating System :: Unix',
-              'Programming Language :: Python :: 2.7',
+              'Programming Language :: Python :: 2.7/3.5',
           ],
           packages=find_packages(),
-          package_data={'pyta.tests': ['*.nii.gz', ],
+          package_data={'pyta.tests': ['*.nii', ],
                         },
           install_requires=install_requires,)
