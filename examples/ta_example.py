@@ -1,8 +1,15 @@
 # coding: utf-8
 """ Example of the tempral proximal operator TA on the synthetic experimentaion
 of the paper."""
+
 # Authors: Hamza Cherkaoui <hamza.cherkaoui@inria.fr>
 # License: new BSD
+
+import os
+is_travis = ('TRAVIS' in os.environ)
+if is_travis:
+    import matplotlib
+    matplotlib.use('Agg')
 
 import os
 import shutil
@@ -162,8 +169,8 @@ for i, voxel in enumerate(voxels_of_interest):
     ax2.set_title("Activity inducing signal")
 
     ax3 = fig.add_subplot(313, sharex=ax1)
-    ax3.stem(i_s, '-b', label="original I signal")
-    ax3.stem(est_i_s, '-g', label="estimated I signal")
+    ax3.stem(i_s, label="original I signal")
+    ax3.stem(est_i_s, label="estimated I signal")
     plt.xlabel("n scans")
     plt.ylabel("amplitude")
     plt.legend()

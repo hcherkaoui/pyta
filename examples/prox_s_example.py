@@ -1,7 +1,14 @@
 # coding: utf-8
 """ Simple example for the spatial proximal operator."""
+
 # Authors: Hamza Cherkaoui <hamza.cherkaoui@inria.fr>
 # License: new BSD
+
+import os
+is_travis = ('TRAVIS' in os.environ)
+if is_travis:
+    import matplotlib
+    matplotlib.use('Agg')
 
 import os
 import shutil
