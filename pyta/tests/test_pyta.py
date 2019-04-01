@@ -13,7 +13,6 @@ from pyta.utils import (estimate_Lipsch_cst, spm_hrf, fista, _soft_th, _obj_t,
                         _grad_t)
 
 
-
 def test_gradient():
     """ Test the gradients.
     """

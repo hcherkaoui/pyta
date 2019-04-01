@@ -225,9 +225,10 @@ def fbs(Y, prox_t, prox_s, update_weights=[0.5, 0.5], max_iter=10,
         X = w_t * X_t + w_s * X_s
 
         if verbose:
-            msg = '*' if ((ii + 1) % 50 != 0) else '+\n'
-            print(msg, end='')
+            sys.stdout.write("*" * ii)
             sys.stdout.flush()
+
+    sys.stdout.write("\n")
 
     if verbose:
         print()
