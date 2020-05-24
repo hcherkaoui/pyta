@@ -12,9 +12,15 @@
 .cache
 build
 __pycache__
+__cache_dir__
+outputs
 
 # ignore example results
 results_*
+
+# ignore all type of data files
+*.nii
+*.nii.gz
 
 # ignore all type of zipped files
 *.zip
