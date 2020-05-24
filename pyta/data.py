@@ -42,7 +42,7 @@ def gen_random_events(N, h, nb_events=4, avg_dur=5, var_dur=1,
         if middle_spike and any(u[center_neighbors] > 0):
             continue  # middle-spike not isolated: retry
         else:
-            z = np.append(np.diff(u))
+            z = np.diff(u)
         x = np.convolve(h, u)
         return x, u, z
 
@@ -85,7 +85,7 @@ def little_brain(tr=1.0, nx=10, ny=10, nz=10, N=200, snr=1.0, h=None,
     if h is None:
         n_times_atom = 30
         h = double_gamma_hrf(tr, n_times_atom)
-    z = np.zeros((nx, ny, nz, N))
+    z = np.zeros((nx, ny, nz, N - 1))
     u = np.zeros((nx, ny, nz, N))
     x = np.zeros((nx, ny, nz, N + len(h) - 1))
     y = np.zeros((nx, ny, nz, N + len(h) - 1))
