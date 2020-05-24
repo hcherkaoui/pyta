@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from pyta import TA
 from pyta.data import little_brain
 from pyta.hrf_model import double_gamma_hrf
-from pyta.utils import compute_lbda_max, check_random_state
+from pyta.utils import check_random_state
 
 
 if __name__ == '__main__':
@@ -55,7 +55,7 @@ if __name__ == '__main__':
 
     ###########################################################################
     # Main experimentation
-    lbda_t = 5e-1  # 0.5 * compute_lbda_max(y, h)
+    lbda_t = 5e-1
     lbda_s = 5e-3
 
     params = dict(t_r=t_r, h=h, max_iter=args.max_iter,

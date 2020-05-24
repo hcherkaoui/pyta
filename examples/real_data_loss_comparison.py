@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 from nilearn.input_data import NiftiMasker
 from pyta import TA
 from pyta.hrf_model import double_gamma_hrf
-from pyta.utils import compute_lbda_max
 
 
 if __name__ == '__main__':
