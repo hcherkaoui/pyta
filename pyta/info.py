@@ -1,4 +1,3 @@
-# coding: utf-8
 """ pyTA version, required package versions, and utilities for checking."""
 # Authors: Hamza Cherkaoui <hamza.cherkaoui@inria.fr>
 #          Bertrand Thirion <bertrand.thirion@inria.fr>
@@ -40,14 +39,6 @@ REQUIRED_MODULE_METADATA = (
         'install_info': _PYTA_INSTALL_MSG}),
     ('joblib', {
         'min_version': '0.11',
-        'required_at_installation': True,
-        'install_info': _PYTA_INSTALL_MSG}),
-    ('nibabel', {
-        'min_version': '0.3.2',
-        'required_at_installation': True,
-        'install_info': _PYTA_INSTALL_MSG}),
-    ('numba', {
-        'min_version': '0.40.1',
         'required_at_installation': True,
         'install_info': _PYTA_INSTALL_MSG}),
     ('prox_tv', {

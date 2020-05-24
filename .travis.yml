@@ -1,12 +1,11 @@
 language: python
 
 python:
-  - "2.7"
-  - "3.5"
+  - "3.6"
 
 install:
   # pyta dependencies
-  - pip install 'joblib>=0.11' 'numpy>=1.14.0' 'scipy>=1.0.0' 'nibabel>=2.3.2' 'matplotlib>=2.1.2' 'numba>=0.40.1' 'prox_tv'
+  - pip install 'joblib>=0.11' 'numpy>=1.14.0' 'scipy>=1.0.0' matplotlib>=2.1.2' 'prox_tv'
   - pip install -e .
 
   # testing dependencies
@@ -19,9 +18,7 @@ script:
   - pytest -vl --cov=pyta --cov-append
   # run examples
   - cd examples
-  - python prox_s_example.py
-  - python prox_t_example.py
-  - python ta_example.py
+  - python ta_example.py --seed 0 --solver-type iterative-z-step --max-iter 1
 
 after_success:
 - bash <(curl -s https://codecov.io/bash)
