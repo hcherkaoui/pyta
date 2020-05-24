@@ -9,6 +9,7 @@ import time
 import argparse
 import matplotlib.pyplot as plt
 from nilearn.input_data import NiftiMasker
+from nilearn import datasets, image
 from pyta import TA
 from pyta.hrf_model import double_gamma_hrf
 
@@ -42,11 +43,22 @@ if __name__ == '__main__':
     len_h = 30
     h = double_gamma_hrf(t_r, len_h)
 
-    sub1_img = 'data/6017587_20227_MNI_RS.nii'
-    sub2_img = 'data/6015996_20227_MNI_RS.nii'
+    sub1_img = 'data/6025086_20227_MNI_RS.nii.gz'
+    sub2_img = 'data/6025837_20227_MNI_RS.nii.gz'
 
-    masker = NiftiMasker(smoothing_fwhm=6.0, standardize=True, detrend=True,
-                         low_pass=0.1, high_pass=0.01, t_r=t_r,
+    # define region masker
+    harvard_oxford = datasets.fetch_atlas_harvard_oxford(
+        'cort-maxprob-thr25-2mm', symmetric_split=True,
+        )
+    atlas = harvard_oxford['maps']
+    atlas_raw = atlas.get_data()
+    region_name = 'Right Frontal Orbital Cortex'
+    mask_roi = atlas_raw == harvard_oxford.labels.index(region_name)
+    mask = image.new_img_like(atlas, mask_roi)
+
+    # load data
+    masker = NiftiMasker(mask_img=mask, smoothing_fwhm=6.0, standardize=True,
+                         detrend=True, low_pass=0.1, high_pass=0.01, t_r=t_r,
                          memory='__cache_dir__')
     masker.fit([sub1_img, sub2_img])
     y_train = masker.inverse_transform(masker.transform(sub1_img)).get_data()
