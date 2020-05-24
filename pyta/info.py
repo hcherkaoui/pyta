@@ -41,10 +41,21 @@ REQUIRED_MODULE_METADATA = (
         'min_version': '0.11',
         'required_at_installation': True,
         'install_info': _PYTA_INSTALL_MSG}),
+    # XXX need to find a fix for the 'scikit-learn' / 'sklearn' problem
+    # ('scikit-learn', {
+    #     'min_version': '0.19.2',
+    #     'required_at_installation': True,
+    #     'install_info': _HEMOLEARN_INSTALL_MSG}),
     ('prox_tv', {
-        'min_version': '0.0.0',  # version not propperly set by the maintainer
+        # version not propperly set by the maintainer
+        'min_version': '0.0.0',
         'required_at_installation': True,
         'install_info': _PYTA_INSTALL_MSG}),
+    # ('carpet', {
+    #     # version not propperly set by the maintainer
+    #     'min_version': '0.0.0',
+    #     'required_at_installation': True,
+    #     'install_info': _PYTA_INSTALL_MSG}),
     ('matplotlib', {
         'min_version': '2.1.2',
         'required_at_installation': False}),

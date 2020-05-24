@@ -5,7 +5,8 @@ python:
 
 install:
   # pyta dependencies
-  - pip install 'joblib>=0.11' 'numpy>=1.14.0' 'scipy>=1.0.0' matplotlib>=2.1.2' 'prox_tv'
+  - pip install 'joblib>=0.11' 'numpy>=1.14.0' 'scipy>=1.0.0' 'scikit-learn>=0.19.2' 'matplotlib>=2.1.2' 'prox_tv'
+  - pip install  git+https://github.com/hcherkaoui/carpet.git
   - pip install -e .
 
   # testing dependencies
@@ -18,7 +19,7 @@ script:
   - pytest -vl --cov=pyta --cov-append
   # run examples
   - cd examples
-  - python ta_example.py --seed 0 --solver-type iterative-z-step --max-iter 1
+  - python simple_example.py --seed 0 --solver-type iterative-z-step --max-iter 1
 
 after_success:
 - bash <(curl -s https://codecov.io/bash)

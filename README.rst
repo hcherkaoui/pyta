@@ -1,19 +1,16 @@
 .. -*- mode: rst -*-
 
-|Travis|_ |Codecov|_ |Python27| |Python35|
+|Travis|_ |Codecov|_ |Python36|
 
 
-.. |Travis| image:: https://travis-ci.com/CherkaouiHamza/pyta.svg?branch=master
-.. _Travis: https://travis-ci.com/CherkaouiHamza/pyta
+.. |Travis| image:: https://travis-ci.com/hcherkaoui/pyta.svg?branch=master
+.. _Travis: https://travis-ci.com/hcherkaoui/pyta
 
-.. |Codecov| image:: https://codecov.io/gh/CherkaouiHamza/pyta/branch/master/graph/badge.svg
-.. _Codecov: https://codecov.io/gh/CherkaouiHamza/pyta
+.. |Codecov| image:: https://codecov.io/gh/hcherkaoui/pyta/branch/master/graph/badge.svg
+.. _Codecov: https://codecov.io/gh/hcherkaoui/pyta
 
-.. |Python27| image:: https://img.shields.io/badge/python-2.7-blue.svg
-.. _Python27: https://badge.fury.io/py/scikit-learn
-
-.. |Python35| image:: https://img.shields.io/badge/python-3.5-blue.svg
-.. _Python35: https://badge.fury.io/py/scikit-learn
+.. |Python36| image:: https://img.shields.io/badge/python-3.6-blue.svg
+.. _Python36: https://badge.fury.io/py/scikit-learn
 
 
 pyTA
@@ -30,7 +27,7 @@ for fMRI data).
 Important links
 ===============
 
-- Official source code repo: https://github.com/CherkaouiHamza/pyta
+- Official source code repo: https://github.com/hcherkaoui/pyta
 - Original Matlab implementation: https://miplab.epfl.ch/index.php/software/total-activation
 
 
@@ -41,6 +38,7 @@ Dependencies
 * scipy >= 1.0.0
 * joblib >= 0.11
 * prox_tv
+* carpet
 * matplotlib >= 2.1.2 (for examples)
 
 
@@ -49,7 +47,7 @@ Install
 
 In order to perform the installation, run the following command from the pyTA directory::
 
-    pip install -r 'joblib>=0.11' 'numpy>=1.14.0' 'scipy>=1.0.0' 'matplotlib>=2.1.2' 'prox_tv
+    pip install -r 'joblib>=0.11' 'numpy>=1.14.0' 'scipy>=1.0.0' 'scikit-learn>=0.19.2' 'matplotlib>=2.1.2' 'prox_tv' 'carpet'
     python setup.py install --user
 
 
@@ -66,4 +64,4 @@ Development
 
 You can check the latest sources with the command::
 
-    git clone https://github.com/CherkaouiHamza/pyta
+    git clone https://github.com/hcherkaoui/pyta

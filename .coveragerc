@@ -1,0 +1,18 @@
+[run]
+branch = True
+parallel = True
+source =
+    pyta
+omit =
+    setup.py
+    pyta/info.py
+    pyta/data.py
+    pyta/tests/*
+
+[report]
+exclude_lines =
+    pragma: no cover
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    except Exception
+ignore_errors = True
