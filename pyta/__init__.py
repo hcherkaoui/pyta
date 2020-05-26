@@ -46,15 +46,12 @@ class TA(TransformerMixin):
     max_iter_training_net : int, (default=200), number of iteration to train
         the network for the z-step when solver_type is 'learn-z-step'
     max_iter_z : int, (default=40), number of iterations/layers for the z-step
-    n_inner_layers : int, (default=50), number of layers for the z-step when
-        solver_type is 'learn-z-step'
     verbose : int, (default=1), verbosity level
     """
     def __init__(self, t_r, h=None, len_h=None, solver_type='iterative-z-step',
                  update_weights=[0.5, 0.5], max_iter=50, n_jobs=1, name='TA',
                  device='cpu', net_solver_type='recursive',
-                 max_iter_training_net=100, max_iter_z=40, n_inner_layers=100,
-                 verbose=1):
+                 max_iter_training_net=100, max_iter_z=40, verbose=1):
 
         # model parameters
         self.t_r = t_r
@@ -67,7 +64,6 @@ class TA(TransformerMixin):
         # network parameters
         self.device = device
         self.max_iter_training_net = max_iter_training_net
-        self.n_inner_layers = n_inner_layers
         self.max_iter_z = max_iter_z
         self.net_solver_type = net_solver_type
 
