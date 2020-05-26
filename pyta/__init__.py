@@ -129,10 +129,11 @@ class TA(TransformerMixin):
         # to compute spatial regularization
         dim_x, dim_y, dim_z, n_times = y.shape
         vol_shape = (dim_x, dim_y, dim_z)
+
         l1 = l3 = [[0, 0, 0], [0, 1, 0], [0, 0, 0]]
         l2 = [[0, 1, 0], [1, -6, 1], [0, 1, 0]]
         fft_D = fftn(np.array([l1, l2, l3]), vol_shape)
-        # to compute temporal regularization
+
         n_times_valid = n_times - len(self.h) + 1
         H = make_toeplitz(self.h, n_times_valid).T
         pinv_H = np.linalg.pinv(H)
@@ -167,6 +168,7 @@ class TA(TransformerMixin):
             y, _prox_t, _prox_s, update_weights=self.update_weights,
             max_iter=self.max_iter, name=self.name, obj=_obj,
             verbose=self.verbose)
+
         self.l_time = np.cumsum(np.array(l_time))
         self.l_loss = np.array(l_loss)
 
@@ -211,7 +213,7 @@ class TA(TransformerMixin):
 
             x0 = np.zeros((n_samples, n_times_valid))
 
-            step_size = np.linalg.norm(HtH, ord=2) ** 2
+            step_size = 1.0 / np.linalg.norm(HtH, ord=2) ** 2
 
             def _grad(x):
                 return _grad_t_analysis(x, HtH, Hty=Hty)
