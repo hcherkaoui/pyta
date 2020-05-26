@@ -26,6 +26,9 @@ def fista(grad, obj, prox, x0, momentum=True, max_iter=100, step_size=None,
     z_old = np.zeros_like(x0)
     x = np.copy(x0)
 
+    if adaptive_step_size and x.ndim > 1:
+        raise ValueError("Backtracking line search need to have 1D gradient")
+
     # saving variables
     pobj_, times_ = [], []
 
