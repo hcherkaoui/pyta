@@ -114,8 +114,10 @@ def fbs(y, prox_t, prox_s, update_weights=[0.5, 0.5], max_iter=10,
     if verbose:
         print(f"[{name}] progress {0}%", end="\r")
 
-    l_loss = []
+    l_time, l_loss = [0.0], [obj(x)]
     for ii in range(max_iter):
+
+        t0 = time.time()
 
         if w_t > 0:
             x_t = x_t + prox_t(x - x_t + y) - x
@@ -125,10 +127,14 @@ def fbs(y, prox_t, prox_s, update_weights=[0.5, 0.5], max_iter=10,
 
         x = w_t * x_t + w_s * x_s
 
+        l_time.append(time.time() - t0)
         l_loss.append(obj(x))
 
         if verbose > 0:
-            print(f"[{name}] progress {100. * (ii + 1) / max_iter}%"
+            print(f"[{name}] progress {100. * (ii + 1) / max_iter:.1f}%"
                   f" - loss={l_loss[-1]:.4e}", end="\r")
 
-    return x, l_loss
+    if verbose > 0:
+        print()
+
+    return x, l_time, l_loss

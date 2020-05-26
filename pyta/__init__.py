@@ -167,10 +167,11 @@ class TA(TransformerMixin):
             reg_s = _reg_s(x)
             return 0.5 * res.dot(res) + lbda_t * reg_t + lbda_s * reg_s
 
-        x, l_loss = fbs(
+        x, l_time, l_loss = fbs(
             y, _prox_t, _prox_s, update_weights=self.update_weights,
             max_iter=self.max_iter, name=self.name, obj=_obj,
             verbose=self.verbose)
+        self.l_time = np.cumsum(np.array(l_time))
         self.l_loss = np.array(l_loss)
 
         x, u, z = self.prox_t(x, lbda_t)  # XXX forget last point in l_loss
