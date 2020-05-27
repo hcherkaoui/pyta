@@ -17,6 +17,7 @@ outputs
 
 # ignore example results
 results_*
+*outputs*
 
 # ignore all type of data files
 *.nii
