@@ -3,7 +3,6 @@
 # License: BSD (3-clause)
 
 import numpy as np
-from numpy.linalg import norm as norm_2
 from .hrf_model import double_gamma_hrf
 from .utils import check_random_state
 
@@ -127,15 +126,6 @@ def little_brain(tr=1.0, nx=10, ny=10, nz=10, N=200, snr=1.0, h=None,
              "obtain the BOLD activity for each region. Each voxel time series"
              " was then corrupted with i.i.d. Gaussian noise such that voxel "
              "time series had SNR of 10 dB.").format(nx, ny, nz)
-    snr1 = norm_2(x[tuple(m1)]) / (norm_2(noise1) + np.finfo(np.float).eps)
-    snr2 = norm_2(x[tuple(m2)]) / (norm_2(noise2) + np.finfo(np.float).eps)
-    snr3 = norm_2(x[tuple(m3)]) / (norm_2(noise3) + np.finfo(np.float).eps)
-    snr4 = norm_2(x[tuple(m4)]) / (norm_2(noise4) + np.finfo(np.float).eps)
-    list_snr = [np.round(20.0 * np.log10(snr1), 3),
-                np.round(20.0 * np.log10(snr2), 3),
-                np.round(20.0 * np.log10(snr3), 3),
-                np.round(20.0 * np.log10(snr4), 3),
-                ]
-    info = {'descr': descr, 'tr': 1.0, 'regions': regions, 'snr': list_snr}
+    info = {'descr': descr, 'tr': 1.0, 'regions': regions}
 
     return y, x, u, z, info
