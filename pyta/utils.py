@@ -7,6 +7,19 @@ import cProfile
 import numpy as np
 
 
+def compute_lbda_max(H, y):
+    """ Compute lambda max. """
+    n_times_valid, n_times = H.shape
+    dim_x, dim_y, dim_z, _ = y.shape
+    y_ravel = y.reshape(dim_x * dim_y * dim_z, n_times)
+    u_shape = (y_ravel.shape[0], n_times_valid)
+    L = np.triu(np.ones((n_times_valid, n_times_valid)))
+    S = H.sum(axis=0)
+    c = (y_ravel.dot(S) / (S ** 2).sum())[:, None] * np.ones(u_shape)
+    lmbd_max = np.abs((y_ravel - c.dot(H)).dot(H.T).dot(L.T))
+    return lmbd_max.max()
+
+
 def check_random_state(seed):
     """Turn seed into a np.random.RandomState instance.
 
@@ -27,22 +40,6 @@ def check_random_state(seed):
         return seed
     raise ValueError('{0} cannot be used to seed a numpy.random.RandomState'
                      ' instance'.format(seed))
-
-
-def compute_lbda_max(y, h, per_sample=False):
-    """ Compute lambda max. """
-    dim_x, dim_y, dim_z, n_times = y.shape
-    n_samples = dim_x * dim_y * dim_z
-    y_ravel = y.reshape(n_samples, n_times)
-
-    lbdas_max = np.array([np.max(np.abs(
-        np.cumsum(np.convolve(h[::-1], y_, mode='valid')[::-1])[::-1]
-        )) for y_ in y_ravel])
-
-    if per_sample:
-        return lbdas_max
-    else:
-        return np.max(lbdas_max)
 
 
 def estimate_Lipsch_cst(AtA, x_len, max_iter=100):
