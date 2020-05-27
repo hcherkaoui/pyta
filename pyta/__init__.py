@@ -3,13 +3,15 @@
 # License: BSD (3-clause)
 
 import warnings
+import time
+import torch
 import numpy as np
-from numpy.fft import fftn, ifftn
 from joblib import Parallel, delayed
 from sklearn.base import TransformerMixin
 from prox_tv import tvgen, tv1_1d
 from carpet.lista_analysis import LpgdTautString
-from .hrf_model import double_gamma_hrf, make_toeplitz
+from carpet.checks import check_tensor
+from carpet.utils import init_vuz
 from .optim import fista, fbs
 from .loss_and_grad import _grad_t_analysis, _obj_t_analysis
 
@@ -48,24 +50,25 @@ class TA(TransformerMixin):
     max_iter_z : int, (default=40), number of iterations/layers for the z-step
     verbose : int, (default=1), verbosity level
     """
-    def __init__(self, t_r, h=None, len_h=None, solver_type='iterative-z-step',
+    def __init__(self, t_r, H, solver_type='iterative-z-step',
                  update_weights=[0.5, 0.5], max_iter=50, n_jobs=1, name='TA',
-                 device='cpu', net_solver_type='recursive',
-                 max_iter_training_net=100, max_iter_z=40, verbose=1):
+                 device='cpu', init_net_parameters=None,
+                 net_solver_type='recursive', max_iter_training_net=100,
+                 max_iter_z=40, verbose=1):
 
         # model parameters
         self.t_r = t_r
-        if (h is not None) and (len_h is not None):
-            raise ValueError("Either provide the HRF or its dimension")
-        if h is None:
-            h = double_gamma_hrf(t_r, len_h)
-        self.h = h
+        self.H = H
+
+        # usefull dimension
+        self.n_times_valid, self.n_times = H.shape
 
         # network parameters
         self.device = device
         self.max_iter_training_net = max_iter_training_net
         self.max_iter_z = max_iter_z
         self.net_solver_type = net_solver_type
+        self.init_net_parameters = init_net_parameters
 
         # solver parameters
         if solver_type in ['learn-z-step', 'iterative-z-step']:
@@ -73,6 +76,14 @@ class TA(TransformerMixin):
         else:
             raise ValueError(f"solver_type should belong to ['learn-z-step',"
                              f" 'iterative-z-step'], got {solver_type}")
+
+        # declare a network in any cases
+        kwargs = dict(A=self.H, n_layers=self.max_iter_z,
+                      learn_th=False, max_iter=self.max_iter_training_net,
+                      net_solver_type=self.net_solver_type,
+                      initial_parameters=self.init_net_parameters,
+                      name="Temporal prox", verbose=1, device=self.device)
+        self.pretrained_network = LpgdTautString(**kwargs)
 
         # optimization parameter
         self.update_weights = update_weights
@@ -88,24 +99,11 @@ class TA(TransformerMixin):
         ----------
         Y : array (n_samples, n_time_frames), observed BOLD signal
         """
+        dim_x, dim_y, dim_z, n_times = y.shape
+        y_ravel = y.reshape(dim_x * dim_y * dim_z, n_times)
+
         if self.solver_type == 'learn-z-step':
-            dim_x, dim_y, dim_z, n_times = y.shape
-            n_samples = dim_x * dim_y * dim_z
-            y_ravel = y.reshape(n_samples, n_times)
-            n_times_valid = y_ravel.shape[1] - len(self.h) + 1
-
-            self.H = make_toeplitz(self.h, n_times_valid)
-
-            kwargs = dict(A=self.H.T, n_layers=self.max_iter_z,
-                          initial_parameters=None, learn_th=False,
-                          max_iter=self.max_iter_training_net,
-                          net_solver_type=self.net_solver_type,
-                          name="Temporal prox", verbose=1,
-                          device=self.device)
-
-            self.pretrained_network = LpgdTautString(**kwargs)
             self.pretrained_network.fit(y_ravel, lbda=lbda_t)
-
         else:
             warnings.warn("Fitting is not necessary if learn_temporal_prox is "
                           "set to False")
@@ -126,18 +124,6 @@ class TA(TransformerMixin):
         Z : array (n_samples, n_time_frames - hrf_n_time_frames + 1),
             source signal
         """
-        # to compute spatial regularization
-        dim_x, dim_y, dim_z, n_times = y.shape
-        vol_shape = (dim_x, dim_y, dim_z)
-
-        l1 = l3 = [[0, 0, 0], [0, 1, 0], [0, 0, 0]]
-        l2 = [[0, 1, 0], [1, -6, 1], [0, 1, 0]]
-        fft_D = fftn(np.array([l1, l2, l3]), vol_shape)
-
-        n_times_valid = n_times - len(self.h) + 1
-        H = make_toeplitz(self.h, n_times_valid).T
-        pinv_H = np.linalg.pinv(H)
-
         def _prox_t(x):
             x, _, _ = self.prox_t(x, lbda_t)
             return x
@@ -145,28 +131,9 @@ class TA(TransformerMixin):
         def _prox_s(x):
             return self.prox_s(x, lbda_s)
 
-        def _reg_t(x):
-            # XXX might not be equivalent to the 'real' temporal regularization
-            x = x.reshape(dim_x * dim_y * dim_z, n_times)
-            u = x.dot(pinv_H)  # XXX
-            z = np.diff(u, axis=1)
-            return np.sum(np.abs(z))
-
-        def _reg_s(x):
-            # XXX might not be equivalent to the'real' spatial regularization
-            Dx = ifftn(fft_D * fftn(x, vol_shape)).real
-            return np.sum(np.abs(Dx))
-
-        def _obj(x):
-            # XXX might not be equivalent to the 'real' loss function
-            res = (x - y).ravel()
-            reg_t = _reg_t(x)
-            reg_s = _reg_s(x)
-            return 0.5 * res.dot(res) + lbda_t * reg_t + lbda_s * reg_s
-
         x, l_time, l_loss = fbs(
             y, _prox_t, _prox_s, update_weights=self.update_weights,
-            max_iter=self.max_iter, name=self.name, obj=_obj,
+            max_iter=self.max_iter, name=self.name,
             verbose=self.verbose)
 
         self.l_time = np.cumsum(np.array(l_time))
@@ -196,22 +163,21 @@ class TA(TransformerMixin):
         y_ravel = y.reshape(n_samples, n_times)
 
         if self.solver_type == 'learn-z-step':
+
+            l_loss, l_time = self._compute_loss(y_ravel, lbda_t)
             u = self.pretrained_network.transform(y_ravel, lbda=lbda_t)
-
-            n_times_valid = y_ravel.shape[1] - len(self.h) + 1
-            H = make_toeplitz(self.h, n_times_valid).T
-
             z = np.diff(u, axis=1)
-            x = u.dot(H)
+            x = u.dot(self.pretrained_network.A)
+
+            self.l_loss_prox_t = l_loss
+            self.l_time_prox_t = l_time
 
         elif self.solver_type == 'iterative-z-step':
-            n_times_valid = y_ravel.shape[1] - len(self.h) + 1
-            H = make_toeplitz(self.h, n_times_valid).T
 
-            HtH = H.dot(H.T)
-            Hty = y_ravel.dot(H.T)
+            HtH = self.H.dot(self.H.T)
+            Hty = y_ravel.dot(self.H.T)
 
-            x0 = np.zeros((n_samples, n_times_valid))
+            _, u0 = self._get_init_(y_ravel, lbda_t, force_numpy=True)
 
             step_size = 1.0 / np.linalg.norm(HtH, ord=2) ** 2
 
@@ -219,26 +185,30 @@ class TA(TransformerMixin):
                 return _grad_t_analysis(x, HtH, Hty=Hty)
 
             def _obj(x):
-                return _obj_t_analysis(x, y_ravel, H, lbda_t)
+                return _obj_t_analysis(x, y_ravel, self.H, lbda_t)
 
             def _prox(x, step_size):
                 return np.array([tv1_1d(x_, lbda_t * step_size) for x_ in x])
 
-            kwargs = dict(x0=x0, grad=_grad, obj=_obj, prox=_prox,
+            kwargs = dict(x0=u0, grad=_grad, obj=_obj, prox=_prox,
                 step_size=step_size, name='_prox_t',  # noqa: E128
-                max_iter=self.max_iter_z, verbose=0)  # noqa: E128
-            u = fista(**kwargs)
+                max_iter=self.max_iter_z, debug=True,  # noqa: E128
+                momentum=True, times=True, verbose=0)  # noqa: E128
+            u, l_loss, l_time = fista(**kwargs)
             z = np.diff(u, axis=1)
-            x = u.dot(H)
+            x = u.dot(self.H)
+
+            self.l_loss_prox_t = l_loss
+            self.l_time_prox_t = np.cumsum(l_time)
 
         else:
             raise ValueError(f"solver_type should belong to [synthesis, "
                              f"analysis, pretrained-net]"
                              f", got {self.solver_type}")
 
-        x = x.reshape(dim_x, dim_y, dim_z, n_times)
-        u = u.reshape(dim_x, dim_y, dim_z, n_times_valid)
-        z = z.reshape(dim_x, dim_y, dim_z, n_times_valid - 1)
+        x = x.reshape(dim_x, dim_y, dim_z, self.n_times)
+        u = u.reshape(dim_x, dim_y, dim_z, self.n_times_valid)
+        z = z.reshape(dim_x, dim_y, dim_z, self.n_times_valid - 1)
 
         return x, u, z
 
@@ -247,3 +217,27 @@ class TA(TransformerMixin):
         if self.solver_type == 'learn-z-step':
             self.fit(y, lbda_t)
         return self.transform(y, lbda_t, lbda_s)
+
+    def _get_init_(self, x, lbda, force_numpy=False):
+        x0, u0, _ = init_vuz(self.pretrained_network.A,
+                             self.pretrained_network.D, x, lbda)
+        if force_numpy:
+            return np.array(x0), np.array(u0)
+        else:
+            return x0, u0
+
+    def _compute_loss(self, x, lbda):
+        """ Return the loss evolution in the forward pass of x. """
+        _, u0 = self._get_init_(x, lbda)
+        x_ = check_tensor(x, device=self.pretrained_network.device)
+        _loss_init = self.pretrained_network._loss_fn(x_, lbda, u0)
+        l_time, l_loss = [0.0], [_loss_init]
+        with torch.no_grad():
+            for output_layer in range(self.pretrained_network.n_layers):
+                t0 = time.time()
+                z = self.pretrained_network(x_, lbda,
+                                            output_layer=output_layer + 1)
+                l_time.append(time.time() - t0)
+                loss_ = self.pretrained_network._loss_fn(x_, lbda, z)
+                l_loss.append(loss_.cpu().numpy())
+        return np.array(l_loss), np.array(l_time)
