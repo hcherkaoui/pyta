@@ -10,9 +10,20 @@ import time
 import argparse
 import pickle
 import matplotlib.pyplot as plt
+import numpy as np
 from nilearn.input_data import NiftiMasker
+from carpet.utils import init_vuz
 from pyta import TA
 from pyta.hrf_model import double_gamma_hrf, make_toeplitz
+from pyta.utils import compute_lbda_max
+from pyta.loss_and_grad import _obj_t_analysis
+
+
+def logspace_layers(n_layers=10, max_depth=50):
+    """ Return n_layers, from 1 to max_depth of different number of layers to
+    define networks """
+    all_n_layers = np.logspace(0, np.log10(max_depth), n_layers).astype(int)
+    return list(np.unique(all_n_layers))
 
 
 if __name__ == '__main__':
@@ -22,7 +33,7 @@ if __name__ == '__main__':
                         help='Max number of iterations for the global loop.')
     parser.add_argument('--max-iter-z', type=int, default=100,
                         help='Max number of iterations for the z-step.')
-    parser.add_argument('--load-net', type=str, default=None,
+    parser.add_argument('--load-net', type=str, default=None, nargs='+',
                         help='Load pretrained network parameters.')
     parser.add_argument('--max-training-iter', type=int, default=1000,
                         help='Max number of iterations to train the '
@@ -56,6 +67,7 @@ if __name__ == '__main__':
     h = double_gamma_hrf(t_r, hrf_time_frames)
 
     n_times_valid = args.n_time_frames - hrf_time_frames + 1
+    D = (np.eye(n_times_valid, k=-1) - np.eye(n_times_valid, k=0))[:, :-1]
     H = make_toeplitz(h, n_times_valid).T
 
     sub1_img = 'data/6025086_20227_MNI_RS.nii.gz'
@@ -81,7 +93,8 @@ if __name__ == '__main__':
 
     ###########################################################################
     # Main experimentation
-    lbda_t = 0.1
+    lbda = 0.1 * compute_lbda_max(H, y_train)
+    all_layers = logspace_layers(n_layers=10, max_depth=args.max_iter_z)
 
     params = dict(t_r=t_r, H=H, name='Iterative-z',
                   max_iter_z=10*args.max_iter_z,
@@ -89,34 +102,47 @@ if __name__ == '__main__':
     ta_iter = TA(**params)
 
     t0 = time.time()
-    _, _, _ = ta_iter.prox_t(y_test, lbda_t)
+    _, _, _ = ta_iter.prox_t(y_test, lbda)
     print(f"ta_iterative.prox_t finished : {time.time() - t0:.2f}s")
 
-    params = dict(t_r=t_r, H=H, max_iter_z=args.max_iter_z,
-                  net_solver_type='recursive', name='Learned-z',
-                  max_iter_training_net=args.max_training_iter,
-                  solver_type='learn-z-step', verbose=1)
+    n_samples = length_x_ * length_y_ * length_z_
+    y_train_ravel = y_train.reshape(n_samples, args.n_time_frames)
+    y_test_ravel = y_test.reshape(n_samples, args.n_time_frames)
+    _, u0, _ = init_vuz(H, D, y_train_ravel, lbda)
+    loss_ta_learn = [_obj_t_analysis(u0, y_test_ravel, H, lbda)]
 
-    if args.load_net is not None:
-        with open(args.load_net, 'rb') as pfile:
-            init_params = pickle.load(pfile)
-        params['init_net_parameters'] = init_params
-        print(f"Loading parameters from '{args.load_net}'")
-        ta_learn = TA(**params)
+    for i, n_layers in enumerate(all_layers):
+        params = dict(t_r=t_r, H=H, max_iter_z=n_layers,
+                      net_solver_type='recursive', name='Learned-z',
+                      max_iter_training_net=args.max_training_iter,
+                      solver_type='learn-z-step', verbose=1)
 
-    else:
-        ta_learn = TA(**params)
-        ta_learn.fit(y_train, lbda_t)
+        if args.load_net is not None:
+            filename = args.load_net[i]
+            with open(filename, 'rb') as pfile:
+                init_params = pickle.load(pfile)
+            params['init_net_parameters'] = init_params
+            print(f"Loading parameters from '{filename}'")
+            ta_learn = TA(**params)
 
-    fitted_params = ta_learn.pretrained_network.export_parameters()
-    filename = os.path.join(args.plots_dir, 'fitted_parameters.pkl')
-    with open(filename, 'wb') as pfile:
-        pickle.dump(fitted_params, pfile)
-    print(f"Saving fitted parameters under '{filename}'")
+        else:
+            ta_learn = TA(**params)
+            ta_learn.fit(y_train, lbda)
 
-    t0 = time.time()
-    _, _, _ = ta_learn.prox_t(y_test, lbda_t)
-    print(f"ta_learn.prox_t finished : {time.time() - t0:.2f}s")
+        fitted_params = ta_learn.pretrained_network.export_parameters()
+        filename = f'fitted_params_n_layers_{n_layers}.pkl'
+        filename = os.path.join(args.plots_dir, filename)
+        with open(filename, 'wb') as pfile:
+            pickle.dump(fitted_params, pfile)
+        print(f"Saving fitted parameters under '{filename}'")
+
+        t0 = time.time()
+        _, u, _ = ta_learn.prox_t(y_test, lbda)
+        print(f"ta_learn.prox_t finished : {time.time() - t0:.2f}s")
+
+        u = np.array(u)
+        loss_ta_learn.append(_obj_t_analysis(u, y_test, H, lbda))
+    loss_ta_learn = np.array(loss_ta_learn)
 
     ###########################################################################
     # Plotting
@@ -125,16 +151,19 @@ if __name__ == '__main__':
     ta_ref = TA(**params)
 
     t0 = time.time()
-    _, _, _ = ta_ref.prox_t(y_test, lbda_t)
+    _, _, _ = ta_ref.prox_t(y_test, lbda)
     print(f"ta_ref.prox_t finished : {time.time() - t0:.2f}s")
 
     min_loss = ta_ref.l_loss_prox_t[-1]
     eps = 1.0e-10
     lw = 6
 
+    loss_ta_iter = ta_iter.l_loss_prox_t - min_loss
+    loss_ta_learn = loss_ta_learn - min_loss
+
     plt.figure(f"[{__file__}] Loss functions", figsize=(6, 3))
-    plt.semilogy(ta_iter.l_loss_prox_t - min_loss, lw=lw, label='iterative')
-    plt.semilogy(ta_learn.l_loss_prox_t - min_loss, lw=lw, label='learn')
+    plt.semilogy(loss_ta_iter, lw=lw, label='iterative')
+    plt.semilogy(loss_ta_learn, lw=lw, label='learn')
     plt.legend(bbox_to_anchor=(1.05, 1.0), loc='upper left',
                borderaxespad=0.0, fontsize=16)
     plt.grid()
