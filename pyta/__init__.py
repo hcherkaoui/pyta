@@ -3,7 +3,6 @@
 # License: BSD (3-clause)
 
 import warnings
-import time
 import torch
 import numpy as np
 from joblib import Parallel, delayed
@@ -164,13 +163,10 @@ class TA(TransformerMixin):
 
         if self.solver_type == 'learn-z-step':
 
-            l_loss, l_time = self._compute_loss(y_ravel, lbda_t)
+            self.l_loss_prox_t = self._compute_loss(y_ravel, lbda_t)
             u = self.pretrained_network.transform(y_ravel, lbda=lbda_t)
             z = np.diff(u, axis=1)
             x = u.dot(self.pretrained_network.A)
-
-            self.l_loss_prox_t = l_loss
-            self.l_time_prox_t = l_time
 
         elif self.solver_type == 'iterative-z-step':
 
@@ -193,13 +189,10 @@ class TA(TransformerMixin):
             kwargs = dict(x0=u0, grad=_grad, obj=_obj, prox=_prox,
                 step_size=step_size, name='_prox_t',  # noqa: E128
                 max_iter=self.max_iter_z, debug=True,  # noqa: E128
-                momentum=True, times=True, verbose=0)  # noqa: E128
-            u, l_loss, l_time = fista(**kwargs)
+                momentum=True, verbose=0)  # noqa: E128
+            u, self.l_loss_prox_t = fista(**kwargs)
             z = np.diff(u, axis=1)
             x = u.dot(self.H)
-
-            self.l_loss_prox_t = l_loss
-            self.l_time_prox_t = np.cumsum(l_time)
 
         else:
             raise ValueError(f"solver_type should belong to [synthesis, "
@@ -231,13 +224,11 @@ class TA(TransformerMixin):
         _, u0 = self._get_init_(x, lbda)
         x_ = check_tensor(x, device=self.pretrained_network.device)
         _loss_init = self.pretrained_network._loss_fn(x_, lbda, u0)
-        l_time, l_loss = [0.0], [_loss_init]
+        l_loss = [_loss_init]
         with torch.no_grad():
             for output_layer in range(self.pretrained_network.n_layers):
-                t0 = time.time()
                 z = self.pretrained_network(x_, lbda,
                                             output_layer=output_layer + 1)
-                l_time.append(time.time() - t0)
                 loss_ = self.pretrained_network._loss_fn(x_, lbda, z)
                 l_loss.append(loss_.cpu().numpy())
-        return np.array(l_loss), np.array(l_time)
+        return np.array(l_loss)
