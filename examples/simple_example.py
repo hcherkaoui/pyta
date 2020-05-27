@@ -15,7 +15,7 @@ import argparse
 import matplotlib.pyplot as plt
 from pyta import TA
 from pyta.data import little_brain
-from pyta.hrf_model import double_gamma_hrf
+from pyta.hrf_model import double_gamma_hrf, make_toeplitz
 from pyta.utils import check_random_state
 
 
@@ -32,6 +32,9 @@ if __name__ == '__main__':
     parser.add_argument('--solver-type', type=str, default='iterative-z-step',
                         help="Solver type for the z-step, possible choice are"
                         " ['iterative-z-step', 'learn-z-step'].")
+    parser.add_argument('--n-time-frames', type=int, default=200,
+                        help='Number of timeframes to retain from the the '
+                        'data fMRI.')
     parser.add_argument('--plots-dir', type=str, default='outputs',
                         help='Outputs directory for plots')
     parser.add_argument('--seed', type=int, default=None,
@@ -53,11 +56,12 @@ if __name__ == '__main__':
     ###########################################################################
     # Synthetic data generation
     t_r = 1.0
-    nx, ny, nz, N_orig = 5, 5, 5, 100
-    snr = 1.0
-    h = double_gamma_hrf(t_r, 30)
-    params = dict(tr=t_r, nx=nx, ny=ny, nz=nz, N=N_orig, snr=snr, h=h,
-                  seed=rng)
+    hrf_time_frames = 20
+    nx = ny = nz = 3
+    n_times_valid = args.n_time_frames - hrf_time_frames + 1
+    h = double_gamma_hrf(t_r, hrf_time_frames)
+    H = make_toeplitz(h, n_times_valid).T
+    params = dict(tr=t_r, nx=nx, ny=ny, nz=nz, N=n_times_valid, h=h, seed=rng)
     y, x, u, _, _ = little_brain(**params)
 
     ###########################################################################
@@ -66,11 +70,10 @@ if __name__ == '__main__':
     lbda_s = 0.005
 
     params = dict(
-        t_r=t_r, h=h, update_weights=[0.5, 0.5], max_iter=args.max_iter,
-        max_iter_z=args.max_iter_z, n_inner_layers=150,
+        t_r=t_r, H=H, update_weights=[0.5, 0.5], max_iter=args.max_iter,
+        max_iter_z=args.max_iter_z, net_solver_type='recursive',
         max_iter_training_net=args.max_training_iter,
-        net_solver_type='recursive', solver_type=args.solver_type,
-        verbose=True,
+        solver_type=args.solver_type, verbose=True,
         )
     ta = TA(**params)
 
