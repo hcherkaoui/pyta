@@ -14,9 +14,10 @@ def _grad_t_analysis(x, HtH, Hty=None):
     return grad
 
 
-def _obj_t_analysis(x, y, H, lbda):
+def _obj_t_analysis(u, y, H, lbda):
     """ Cost func for the temporal prox for one voxels. """
-    x = np.atleast_2d(x)
-    res = (x.dot(H) - y).ravel()
-    reg = np.sum(np.abs(np.diff(x, axis=1)))
-    return 0.5 * res.dot(res) + lbda * reg
+    u = np.atleast_2d(u)
+    n_samples = u.shape[0]
+    res = (u.dot(H) - y).ravel()
+    reg = np.sum(np.abs(np.diff(u, axis=1)))
+    return (0.5 * res.dot(res) + lbda * reg) / n_samples
