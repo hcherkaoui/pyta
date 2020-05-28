@@ -74,10 +74,10 @@ if __name__ == '__main__':
     y_test = masker.inverse_transform(masker.transform(sub2_img)).get_data()
 
     # reduce dimensionality
-    start_, length_x_, length_y_, length_z_ = 10, 10, 10, 10
-    mask_roi = (slice(start_, start_ + length_x_),
-                slice(start_, start_ + length_y_),
-                slice(start_, start_ + length_z_),
+    start_, nx, ny, nz = 10, 10, 10, 10
+    mask_roi = (slice(start_, start_ + nx),
+                slice(start_, start_ + ny),
+                slice(start_, start_ + nz),
                 slice(0, args.n_time_frames))
     y_train = y_train[mask_roi]
     y_test = y_test[mask_roi]
@@ -110,7 +110,7 @@ if __name__ == '__main__':
     print(f"ta_iterative.prox_t finished : {time.time() - t0:.2f}s")
     loss_ta_iter = ta_iter.l_loss_prox_t
 
-    n_samples = length_x_ * length_y_ * length_z_
+    n_samples = nx * ny * nz
     y_test_ravel = y_test.reshape(n_samples, args.n_time_frames)
     _, u0, _ = init_vuz(H, D, y_test_ravel, lbda)
     loss_ta_learn = [_obj_t_analysis(u0, y_test_ravel, H, lbda)]
