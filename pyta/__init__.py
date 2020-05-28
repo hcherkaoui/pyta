@@ -32,8 +32,8 @@ class TA(TransformerMixin):
         resolution
     h : array (hrf_n_time_frames,), (default=None), HRF
     len_h : int, (default=None), desired length of the HRF
-    solver_type : str, (default='iterative-z-step'), solder type for the
-        z-step, valid option are ['iterative-z-step', 'learn-z-step']
+    solver_type : str, (default='fista-z-step'), solder type for the
+        z-step, valid option are ['ista-z-step', 'fista-z-step' 'learn-z-step']
     update_weights : tuple of two float, weights to balance the constrained
         between the spatial and temporal update
     max_iter : int, number of iterations for the main loop
@@ -42,18 +42,18 @@ class TA(TransformerMixin):
     name : str, id name of the TA instance
     device : str, (default='cpu'), Cuda device to use the network for the
         z-step when solver_type is 'learn-z-step'
-    net_solver_type : str (default='recursive'), define the method of
+    net_solver_training_type : str (default='recursive'), define the method of
         optimization for the z-step when solver_type is 'learn-z-step'
     max_iter_training_net : int, (default=200), number of iteration to train
         the network for the z-step when solver_type is 'learn-z-step'
     max_iter_z : int, (default=40), number of iterations/layers for the z-step
     verbose : int, (default=1), verbosity level
     """
-    def __init__(self, t_r, H, solver_type='iterative-z-step',
+    def __init__(self, t_r, H, solver_type='fista-z-step',
                  update_weights=[0.5, 0.5], max_iter=50, n_jobs=1, name='TA',
                  device='cpu', init_net_parameters=None,
-                 net_solver_type='recursive', max_iter_training_net=100,
-                 max_iter_z=40, verbose=1):
+                 net_solver_training_type='recursive',
+                 max_iter_training_net=100, max_iter_z=40, verbose=1):
 
         # model parameters
         self.t_r = t_r
@@ -66,23 +66,24 @@ class TA(TransformerMixin):
         self.device = device
         self.max_iter_training_net = max_iter_training_net
         self.max_iter_z = max_iter_z
-        self.net_solver_type = net_solver_type
+        self.net_solver_training_type = net_solver_training_type
         self.init_net_parameters = init_net_parameters
 
         # solver parameters
-        if solver_type in ['learn-z-step', 'iterative-z-step']:
+        if solver_type in ['learn-z-step', 'ista-z-step', 'fista-z-step']:
             self.solver_type = solver_type
         else:
             raise ValueError(f"solver_type should belong to ['learn-z-step',"
-                             f" 'iterative-z-step'], got {solver_type}")
+                             f" 'ista-z-step', 'fista-z-step']"
+                             f", got {solver_type}")
 
         # declare a network in any cases
         kwargs = dict(A=self.H, n_layers=self.max_iter_z,
                       learn_th=False, max_iter=self.max_iter_training_net,
-                      net_solver_type=self.net_solver_type,
+                      net_solver_type=self.net_solver_training_type,
                       initial_parameters=self.init_net_parameters,
                       name="Temporal prox", verbose=1, device=self.device)
-        self.pretrained_network = LpgdTautString(**kwargs)
+        self.net_solver = LpgdTautString(**kwargs)
 
         # optimization parameter
         self.update_weights = update_weights
@@ -102,7 +103,7 @@ class TA(TransformerMixin):
         y_ravel = y.reshape(dim_x * dim_y * dim_z, n_times)
 
         if self.solver_type == 'learn-z-step':
-            self.pretrained_network.fit(y_ravel, lbda=lbda_t)
+            self.net_solver.fit(y_ravel, lbda=lbda_t)
         else:
             warnings.warn("Fitting is not necessary if learn_temporal_prox is "
                           "set to False")
@@ -142,7 +143,7 @@ class TA(TransformerMixin):
 
         return x, u, z
 
-    def prox_s(self, y, lbda_s):
+    def prox_s(self, y, lbda_s, reshape_4d=True):
         """ The spatial proximal operator for full brain. """
         dim_x, dim_y, dim_z, n_times = y.shape
 
@@ -153,9 +154,11 @@ class TA(TransformerMixin):
                 delayed(_prox_s)(y[..., i], lbda_s) for i in range(n_times))
         x = np.vstack([x_.flatten() for x_ in x]).T
 
-        return x.reshape(dim_x, dim_y, dim_z, n_times)
+        if reshape_4d:
+            return x.reshape(dim_x, dim_y, dim_z, n_times)
+        return x
 
-    def prox_t(self, y, lbda_t):
+    def prox_t(self, y, lbda_t, reshape_4d=True):
         """ The temporal proximal operator for full brain. """
         dim_x, dim_y, dim_z, n_times = y.shape
         n_samples = dim_x * dim_y * dim_z
@@ -164,16 +167,18 @@ class TA(TransformerMixin):
         if self.solver_type == 'learn-z-step':
 
             self.l_loss_prox_t = self._compute_loss(y_ravel, lbda_t)
-            u = self.pretrained_network.transform(y_ravel, lbda=lbda_t)
+            u = self.net_solver.transform(y_ravel, lbda=lbda_t)
             z = np.diff(u, axis=1)
-            x = u.dot(self.pretrained_network.A)
+            x = u.dot(self.net_solver.A)
 
-        elif self.solver_type == 'iterative-z-step':
+        elif self.solver_type in ['ista-z-step', 'fista-z-step']:
+
+            momentum = self.solver_type == 'fista-z-step'
 
             HtH = self.H.dot(self.H.T)
             Hty = y_ravel.dot(self.H.T)
 
-            _, u0 = self._get_init_(y_ravel, lbda_t, force_numpy=True)
+            _, u0 = self._get_init(y_ravel, lbda_t, force_numpy=True)
 
             step_size = 1.0 / np.linalg.norm(HtH, ord=2) ** 2
 
@@ -189,20 +194,21 @@ class TA(TransformerMixin):
             kwargs = dict(x0=u0, grad=_grad, obj=_obj, prox=_prox,
                 step_size=step_size, name='_prox_t',  # noqa: E128
                 max_iter=self.max_iter_z, debug=True,  # noqa: E128
-                momentum=True, verbose=0)  # noqa: E128
+                momentum=momentum, verbose=0)  # noqa: E128
             u, self.l_loss_prox_t = fista(**kwargs)
             z = np.diff(u, axis=1)
             x = u.dot(self.H)
 
         else:
-            raise ValueError(f"solver_type should belong to [synthesis, "
-                             f"analysis, pretrained-net]"
+            raise ValueError(f"solver_type should belong to [learn-z-step, "
+                             f"ista-z-step, fista-z-step]"
                              f", got {self.solver_type}")
 
-        x = x.reshape(dim_x, dim_y, dim_z, self.n_times)
-        u = u.reshape(dim_x, dim_y, dim_z, self.n_times_valid)
-        z = z.reshape(dim_x, dim_y, dim_z, self.n_times_valid - 1)
-
+        if reshape_4d:  # XXX seems to mess up the order
+            x = x.reshape(dim_x, dim_y, dim_z, self.n_times)
+            u = u.reshape(dim_x, dim_y, dim_z, self.n_times_valid)
+            z = z.reshape(dim_x, dim_y, dim_z, self.n_times_valid - 1)
+            return x, u, z
         return x, u, z
 
     def fit_transform(self, y, lbda_t, lbda_s):
@@ -211,9 +217,9 @@ class TA(TransformerMixin):
             self.fit(y, lbda_t)
         return self.transform(y, lbda_t, lbda_s)
 
-    def _get_init_(self, x, lbda, force_numpy=False):
-        x0, u0, _ = init_vuz(self.pretrained_network.A,
-                             self.pretrained_network.D, x, lbda)
+    def _get_init(self, x, lbda, force_numpy=False):
+        x0, u0, _ = init_vuz(self.net_solver.A,
+                             self.net_solver.D, x, lbda)
         if force_numpy:
             return np.array(x0), np.array(u0)
         else:
@@ -221,14 +227,12 @@ class TA(TransformerMixin):
 
     def _compute_loss(self, x, lbda):
         """ Return the loss evolution in the forward pass of x. """
-        _, u0 = self._get_init_(x, lbda)
-        x_ = check_tensor(x, device=self.pretrained_network.device)
-        _loss_init = self.pretrained_network._loss_fn(x_, lbda, u0)
-        l_loss = [_loss_init]
+        _, u0 = self._get_init(x, lbda)
+        x_ = check_tensor(x, device=self.net_solver.device)
+        l_loss = [self.net_solver._loss_fn(x_, lbda, u0)]
         with torch.no_grad():
-            for output_layer in range(self.pretrained_network.n_layers):
-                z = self.pretrained_network(x_, lbda,
-                                            output_layer=output_layer + 1)
-                loss_ = self.pretrained_network._loss_fn(x_, lbda, z)
+            for n_layers in range(self.net_solver.n_layers):
+                u = self.net_solver(x_, lbda, output_layer=n_layers+1)
+                loss_ = self.net_solver._loss_fn(x_, lbda, u)
                 l_loss.append(loss_.cpu().numpy())
         return np.array(l_loss)
