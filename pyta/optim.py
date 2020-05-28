@@ -30,7 +30,7 @@ def fista(grad, obj, prox, x0, momentum=True, max_iter=100, step_size=None,
         raise ValueError("Backtracking line search need to have 1D gradient")
 
     # saving variables
-    pobj_, times_ = [], []
+    pobj_, times_ = [obj(x)], [0.0]
 
     # precompute L.op(y)
     if adaptive_step_size:
@@ -78,7 +78,7 @@ def fista(grad, obj, prox, x0, momentum=True, max_iter=100, step_size=None,
         l1_diff = np.sum(np.abs(z - z_old))
         if l1_diff <= eps and early_stopping:
             if debug:
-                print("\n-----> [{0}] early-stopping "
+                print("---> [{0}] early-stopping "
                       "done at {1}/{2}".format(name, ii+1, max_iter))
             break
         if l1_diff > np.finfo(np.float64).max:
