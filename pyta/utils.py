@@ -7,7 +7,14 @@ import cProfile
 import numpy as np
 
 
-def compute_lbda_max(H, y):
+def logspace_layers(n_layers=10, max_depth=50):
+    """ Return n_layers, from 1 to max_depth of different number of layers to
+    define networks """
+    all_n_layers = np.logspace(0, np.log10(max_depth), n_layers).astype(int)
+    return list(np.unique(all_n_layers))
+
+
+def compute_lbda_max(H, y, per_sample=False):
     """ Compute lambda max. """
     n_times_valid, n_times = H.shape
     dim_x, dim_y, dim_z, _ = y.shape
@@ -17,7 +24,10 @@ def compute_lbda_max(H, y):
     S = H.sum(axis=0)
     c = (y_ravel.dot(S) / (S ** 2).sum())[:, None] * np.ones(u_shape)
     lmbd_max = np.abs((y_ravel - c.dot(H)).dot(H.T).dot(L.T))
-    return lmbd_max.max()
+    if per_sample:
+        return lmbd_max.max(axis=1, keepdims=True)
+    else:
+        return lmbd_max.max()
 
 
 def check_random_state(seed):
