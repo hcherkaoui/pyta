@@ -13,6 +13,7 @@ import os
 import time
 import argparse
 import matplotlib.pyplot as plt
+import numpy as np
 from pyta import TA
 from pyta.data import little_brain
 from pyta.hrf_model import double_gamma_hrf, make_toeplitz
@@ -29,9 +30,9 @@ if __name__ == '__main__':
     parser.add_argument('--max-training-iter', type=int, default=300,
                         help='Max number of iterations to train the '
                         'learnable networks for the z-step.')
-    parser.add_argument('--solver-type', type=str, default='iterative-z-step',
+    parser.add_argument('--solver-type', type=str, default='fista-z-step',
                         help="Solver type for the z-step, possible choice are"
-                        " ['iterative-z-step', 'learn-z-step'].")
+                        " ['ista-z-step', 'fista-z-step', 'learn-z-step'].")
     parser.add_argument('--n-time-frames', type=int, default=200,
                         help='Number of timeframes to retain from the the '
                         'data fMRI.')
@@ -61,22 +62,27 @@ if __name__ == '__main__':
     n_times_valid = args.n_time_frames - hrf_time_frames + 1
     h = double_gamma_hrf(t_r, hrf_time_frames)
     H = make_toeplitz(h, n_times_valid).T
+
     params = dict(tr=t_r, nx=nx, ny=ny, nz=nz, N=n_times_valid, h=h, seed=rng)
     y, x, u, _, _ = little_brain(**params)
 
+    lbda_max = compute_lbda_max(H, y, per_sample=True)
+    lbda_max = lbda_max.reshape(nx, ny, nz)
+    y /= np.repeat(lbda_max[..., None], args.n_time_frames, axis=-1)
+    x /= np.repeat(lbda_max[..., None], args.n_time_frames, axis=-1)
+    u /= np.repeat(lbda_max[..., None], n_times_valid, axis=-1)
+
     ###########################################################################
     # Main experimentation
-    lbda_t = 0.1 * compute_lbda_max(H, y)
+    lbda = 0.1
 
-    params = dict(
-        t_r=t_r, H=H, update_weights=[0.5, 0.5], max_iter=args.max_iter,
-        max_iter_z=args.max_iter_z, net_solver_type='recursive',
-        max_iter_training_net=args.max_training_iter,
-        solver_type=args.solver_type, verbose=True,
-        )
+    params = dict(t_r=t_r, H=H, max_iter_z=args.max_iter_z,
+                  net_solver_training_type='recursive',
+                  max_iter_training_net=args.max_training_iter,
+                  solver_type=args.solver_type, verbose=1)
     ta = TA(**params)
 
-    est_x, est_u, _ = ta.prox_t(y, lbda_t)
+    est_x, est_u, _ = ta.prox_t(y, lbda)
 
     ###########################################################################
     # Plotting
