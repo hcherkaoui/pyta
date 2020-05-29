@@ -8,7 +8,7 @@ import numpy as np
 from joblib import Parallel, delayed
 from sklearn.base import TransformerMixin
 from prox_tv import tvgen, tv1_1d
-from carpet.lista_analysis import LpgdTautString
+from carpet.lista_analysis import LpgdTautString, ListaTV
 from carpet.checks import check_tensor
 from carpet.utils import init_vuz
 from .optim import fista, fbs
@@ -42,16 +42,22 @@ class TA(TransformerMixin):
     name : str, id name of the TA instance
     device : str, (default='cpu'), Cuda device to use the network for the
         z-step when solver_type is 'learn-z-step'
+    net_solver_type : str, (default='fixed-inner-prox'), chose for the inner
+        learn net solver for the, possible value are ['fixed-inner-prox',
+        'learn-inner-prox']
     net_solver_training_type : str (default='recursive'), define the method of
         optimization for the z-step when solver_type is 'learn-z-step'
     max_iter_training_net : int, (default=200), number of iteration to train
         the network for the z-step when solver_type is 'learn-z-step'
     max_iter_z : int, (default=40), number of iterations/layers for the z-step
+    inner_max_iter_net : int, (default=50) number of layers for the inner prox
+        net of the net solver
     verbose : int, (default=1), verbosity level
     """
     def __init__(self, t_r, H, solver_type='fista-z-step',
                  update_weights=[0.5, 0.5], max_iter=50, n_jobs=1, name='TA',
                  device='cpu', init_net_parameters=None,
+                 net_solver_type='fixed-inner-prox', inner_max_iter_net=50,
                  net_solver_training_type='recursive',
                  max_iter_training_net=100, max_iter_z=40, verbose=1):
 
@@ -65,8 +71,10 @@ class TA(TransformerMixin):
         # network parameters
         self.device = device
         self.max_iter_training_net = max_iter_training_net
+        self.inner_max_iter_net = inner_max_iter_net
         self.max_iter_z = max_iter_z
         self.net_solver_training_type = net_solver_training_type
+        self.net_solver_type = net_solver_type
         self.init_net_parameters = init_net_parameters
 
         # solver parameters
@@ -77,13 +85,29 @@ class TA(TransformerMixin):
                              f" 'ista-z-step', 'fista-z-step']"
                              f", got {solver_type}")
 
-        # declare a network in any cases
-        kwargs = dict(A=self.H, n_layers=self.max_iter_z,
-                      learn_th=False, max_iter=self.max_iter_training_net,
-                      net_solver_type=self.net_solver_training_type,
-                      initial_parameters=self.init_net_parameters,
-                      name="Temporal prox", verbose=1, device=self.device)
-        self.net_solver = LpgdTautString(**kwargs)
+        if self.net_solver_type == 'learn-inner-prox':
+            kwargs = dict(A=self.H, n_layers=self.max_iter_z, learn_th=False,
+                          learn_prox='none', use_moreau=False,
+                          n_inner_layers=self.inner_max_iter_net,
+                          max_iter=self.max_iter_training_net,
+                          initial_parameters=self.init_net_parameters,
+                          net_solver_type="recursive", name="Temporal prox",
+                          verbose=1, device=self.device)
+            self.net_solver = ListaTV(**kwargs)
+
+        elif self.net_solver_type == 'fixed-inner-prox':
+            # declare a network in any cases
+            kwargs = dict(A=self.H, n_layers=self.max_iter_z,
+                          learn_th=False, max_iter=self.max_iter_training_net,
+                          net_solver_type=self.net_solver_training_type,
+                          initial_parameters=self.init_net_parameters,
+                          name="Temporal prox", verbose=1, device=self.device)
+            self.net_solver = LpgdTautString(**kwargs)
+
+        else:
+            raise ValueError(f"net_solver_type should belong to "
+                             f"['fixed-inner-prox', 'learn-inner-prox']"
+                             f", got {self.net_solver_type}")
 
         # optimization parameter
         self.update_weights = update_weights
@@ -165,6 +189,10 @@ class TA(TransformerMixin):
         y_ravel = y.reshape(n_samples, n_times)
 
         if self.solver_type == 'learn-z-step':
+
+            if hasattr(self.net_solver, 'training_loss_'):
+                warnings.warn("Learn-prox-TV seems to not have been trained, "
+                              "call the 'fit' method to that purpose")
 
             self.l_loss_prox_t = self._compute_loss(y_ravel, lbda_t)
             u = self.net_solver.transform(y_ravel, lbda=lbda_t)
