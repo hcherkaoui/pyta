@@ -3,21 +3,22 @@
 # License: BSD (3-clause)
 
 import numpy as np
+from .convolution import hthu_numpy, hu_numpy
 
 
-def _grad_t_analysis(x, HtH, Hty=None):
+def _grad_t_analysis(u, hth, htY=None):
     """ Gradient for the temporal prox for one voxels. """
-    x = np.atleast_2d(x)
-    grad = x.dot(HtH)
-    if Hty is not None:
-        grad -= Hty
+    u = np.atleast_2d(u)
+    grad = hthu_numpy(hth, u)
+    if htY is not None:
+        grad -= htY
     return grad
 
 
-def _obj_t_analysis(u, y, H, lbda):
+def _obj_t_analysis(u, x, h, lbda):
     """ Cost func for the temporal prox for one voxels. """
     u = np.atleast_2d(u)
     n_samples = u.shape[0]
-    res = (u.dot(H) - y).ravel()
-    reg = np.sum(np.abs(np.diff(u, axis=1)))
-    return (0.5 * res.dot(res) + lbda * reg) / n_samples
+    res = (hu_numpy(h, u) - x).ravel()
+    loss = 0.5 * res.dot(res) + lbda * np.sum(np.abs(np.diff(u)))
+    return loss / n_samples

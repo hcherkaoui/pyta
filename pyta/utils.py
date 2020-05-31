@@ -5,6 +5,13 @@
 import warnings
 import cProfile
 import numpy as np
+from .convolution import make_toeplitz
+
+
+def lipsch_cst_from_kernel(h, n_times_valid):
+    """ Compute the Lipschitz constant form the convolution kernel h. """
+    H = make_toeplitz(h, n_times_valid)
+    return np.linalg.norm(H, ord=2) ** 2
 
 
 def logspace_layers(n_layers=10, max_depth=50):

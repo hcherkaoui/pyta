@@ -4,7 +4,6 @@
 
 import numpy as np
 from scipy.special import gammaln, xlogy
-from scipy.linalg import toeplitz
 
 
 # double gamma HRF model constants
@@ -136,21 +135,3 @@ def double_gamma_hrf(t_r, n_times_atom=60):
     """
     _hrf = _double_gamma_hrf(delta=1.0, t_r=t_r, dur=n_times_atom * t_r)[0]
     return check_len_hrf(_hrf, n_times_atom)
-
-
-def make_toeplitz(v, n_times_valid):
-    """ Make Toeplitz matrix from given kernel to perform valid
-    convolution.
-
-    Parameters
-    ----------
-    v : array, shape (n_times_atom), HRF
-    n_times_valid : int, length of the temporal components
-
-    Return
-    ------
-    H : array, shape (n_times, n_times_valid), Toeplitz matrix, recall that
-        n_times = n_times_valid + n_times_atom -1
-    """
-    padd = np.zeros((1, n_times_valid - 1))
-    return toeplitz(np.c_[v[None, :], padd], np.c_[1.0, padd])
