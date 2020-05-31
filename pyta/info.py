@@ -33,6 +33,10 @@ REQUIRED_MODULE_METADATA = (
         'min_version': '1.14.0',
         'required_at_installation': True,
         'install_info': _PYTA_INSTALL_MSG}),
+    ('numba', {
+        'min_version': '0.48.0',
+        'required_at_installation': True,
+        'install_info': _PYTA_INSTALL_MSG}),
     ('scipy', {
         'min_version': '1.0.0',
         'required_at_installation': True,

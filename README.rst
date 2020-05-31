@@ -35,6 +35,7 @@ Dependencies
 ============
 
 * numpy >= 1.14.0
+* numba >= 0.48.0
 * scipy >= 1.0.0
 * joblib >= 0.11
 * prox_tv
