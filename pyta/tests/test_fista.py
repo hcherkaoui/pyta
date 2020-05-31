@@ -1,60 +1,22 @@
 # coding: utf-8
-""" Unittests module."""
+""" Unittests module on optimization functions."""
 # Authors: Hamza Cherkaoui <hamza.cherkaoui@inria.fr>
 # License: new BSD
 
 import pytest
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.optimize import approx_fprime
 from prox_tv import tv1_1d
 from pyta.loss_and_grad import _obj_t_analysis, _grad_t_analysis
 from pyta.optim import fista
-from pyta.hrf_model import double_gamma_hrf, make_toeplitz
-from pyta.utils import estimate_Lipsch_cst
-
-
-def test_gradient():
-    """ Test the gradients.
-    """
-    h = double_gamma_hrf(1.0, 30)
-    n_times = 100
-    n_times_valid = n_times - len(h) + 1
-
-    y = np.random.randn(1, n_times)
-    x0 = np.random.randn(1, n_times_valid)
-
-    H = make_toeplitz(h, n_times_valid).T
-    HtH = H.dot(H.T)
-    Hty = y.dot(H.T)
-
-    def grad(x):
-        return _grad_t_analysis(x, HtH, Hty)
-
-    def approx_grad(x):
-        def obj(x):
-            return _obj_t_analysis(x, y, H, 0.0)
-        return approx_fprime(x.ravel(), obj, epsilon=1e-10)
-
-    err = np.linalg.norm(approx_grad(x0) - grad(x0))
-    err /= np.linalg.norm(approx_grad(x0))
-    try:
-        assert err < 1.0e-2
-    except AssertionError as e:
-        plt.figure("[{0}] Failed estimation".format("approx-grad/grad"))
-        plt.plot(approx_grad(x0).T, lw=3.0, label="approx-grad")
-        plt.plot(grad(x0).T, ls='--', lw=3.0, label="grad")
-        plt.title("Approximated gradient / closed-form gradient")
-        plt.legend()
-        plt.show()
-        raise e
+from pyta.hrf_model import double_gamma_hrf
+from pyta.utils import estimate_Lipsch_cst, lipsch_cst_from_kernel
 
 
 @pytest.mark.parametrize('momentum', [True, False])
 @pytest.mark.parametrize('max_iter', [1, 10, 100])
 def test_fista_decrease(momentum, max_iter):
-    """ Test that the BOLD-TV cost function deacrease.
-    """
+    """ Test that the BOLD-TV cost function deacrease. """
     h = double_gamma_hrf(1.0, 30)
     n_times = 100
     n_times_valid = n_times - len(h) + 1
@@ -62,18 +24,18 @@ def test_fista_decrease(momentum, max_iter):
     y = np.random.randn(1, n_times)
     x0 = np.random.randn(1, n_times_valid)
 
-    H = make_toeplitz(h, n_times_valid).T
-    HtH = H.dot(H.T)
-    Hty = y.dot(H.T)
+    hth = np.convolve(h[::-1], h)
+    htY = np.r_[[np.convolve(h[::-1], y_, mode='valid') for y_ in y]]
 
-    step_size = np.linalg.norm(HtH, ord=2) ** 2
+    lipsch_cst = lipsch_cst_from_kernel(h, n_times_valid)
+    step_size = 1.0 / lipsch_cst
     lbda = 1.0
 
     def grad(x):
-        return _grad_t_analysis(x, HtH, Hty)
+        return _grad_t_analysis(x, hth, htY)
 
     def obj(x):
-        return _obj_t_analysis(x, y, H, lbda=lbda)
+        return _obj_t_analysis(x, y, h, lbda=lbda)
 
     def prox(x, step_size):
         return np.r_[[tv1_1d(x_, lbda * step_size) for x_ in x]]
@@ -81,12 +43,11 @@ def test_fista_decrease(momentum, max_iter):
     x1 = fista(grad, obj, prox, x0, momentum=momentum, max_iter=max_iter,
                step_size=step_size)
 
-    assert _obj_t_analysis(x0, y, H, lbda) >= _obj_t_analysis(x1, y, H, lbda)
+    assert _obj_t_analysis(x0, y, h, lbda) >= _obj_t_analysis(x1, y, h, lbda)
 
 
 def test_estimate_Lipsch_cst():
-    """ Dummy test for estimate_Lipsch_cst.
-    """
+    """ Dummy test for estimate_Lipsch_cst. """
     def AtA(x):
         return x
     step_size = estimate_Lipsch_cst(AtA, 100)
@@ -97,8 +58,7 @@ def test_estimate_Lipsch_cst():
 @pytest.mark.parametrize('step_size', [None, '1/Lipsch', 1.0])
 def test_fista_optimum(momentum, step_size):
     """ Test the F/ISTA implementation of a dummy cost-function
-    (with a inversible observation operator: the identity).
-    """
+    (with a inversible observation operator: the identity). """
     h = np.array([1.0])
     n_times = 100
     n_times_valid = n_times - len(h) + 1
