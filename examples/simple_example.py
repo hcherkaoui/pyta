@@ -16,7 +16,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from pyta import TA
 from pyta.data import little_brain
-from pyta.hrf_model import double_gamma_hrf, make_toeplitz
+from pyta.hrf_model import double_gamma_hrf
+from pyta.convolution import make_toeplitz
 from pyta.utils import check_random_state, compute_lbda_max
 
 
@@ -76,7 +77,8 @@ if __name__ == '__main__':
     # Main experimentation
     lbda = 0.1
 
-    params = dict(t_r=t_r, H=H, max_iter_z=args.max_iter_z,
+    params = dict(t_r=t_r, h=h, n_times_valid=n_times_valid,
+                  max_iter_z=args.max_iter_z,
                   net_solver_training_type='recursive',
                   max_iter_training_net=args.max_training_iter,
                   solver_type=args.solver_type, verbose=1)

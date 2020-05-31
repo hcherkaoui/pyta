@@ -15,7 +15,8 @@ import numpy as np
 from carpet.utils import init_vuz
 from pyta import TA
 from pyta.data import little_brain
-from pyta.hrf_model import double_gamma_hrf, make_toeplitz
+from pyta.hrf_model import double_gamma_hrf
+from pyta.convolution import make_toeplitz
 from pyta.utils import check_random_state, compute_lbda_max, logspace_layers
 from pyta.loss_and_grad import _obj_t_analysis
 
@@ -66,8 +67,7 @@ if __name__ == '__main__':
     ###########################################################################
     # Parameters to set for the experiment
     hrf_time_frames = 30
-    nx = ny = nz = 5
-    net_solver_type = 'fixed-inner-prox'
+    nx = ny = nz = 10
     multi_iter = 10
     lw = 7
 
@@ -105,7 +105,8 @@ if __name__ == '__main__':
     # Main experimentation
     all_layers = logspace_layers(n_layers=10, max_depth=args.max_iter_z)
 
-    params = dict(t_r=t_r, H=H, name='Iterative-z',
+    params = dict(t_r=t_r, h=h, n_times_valid=n_times_valid,
+                  name='Iterative-z',
                   max_iter_z=int(multi_iter * args.max_iter_z),
                   solver_type='fista-z-step', verbose=1)
     ta_iter = TA(**params)
@@ -118,12 +119,12 @@ if __name__ == '__main__':
     n_samples = nx * ny * nz
     y_test_ravel = y_test.reshape(n_samples, args.n_time_frames)
     _, u0, _ = init_vuz(H, D, y_test_ravel, args.temp_reg)
-    loss_ta_learn = [_obj_t_analysis(u0, y_test_ravel, H, args.temp_reg)]
+    loss_ta_learn = [_obj_t_analysis(u0, y_test_ravel, h, args.temp_reg)]
 
     init_net_params = None
-    params = dict(t_r=t_r, H=H, net_solver_training_type='recursive',
-                  net_solver_type=net_solver_type, name='Learned-z',
-                  solver_type='learn-z-step', verbose=1,
+    params = dict(t_r=t_r, h=h, n_times_valid=n_times_valid,
+                  net_solver_training_type='recursive',
+                  name='Learned-z', solver_type='learn-z-step', verbose=1,
                   max_iter_training_net=args.max_training_iter)
 
     for i, n_layers in enumerate(all_layers):
@@ -154,15 +155,15 @@ if __name__ == '__main__':
         t0 = time.time()
         _, u, _ = ta_learn.prox_t(y_test, args.temp_reg, reshape_4d=False)
         print(f"ta_learn.prox_t finished : {time.time() - t0:.2f}s")
-        loss_ta_learn.append(_obj_t_analysis(u, y_test_ravel, H,
+        loss_ta_learn.append(_obj_t_analysis(u, y_test_ravel, h,
                                              args.temp_reg))
 
     loss_ta_learn = np.array(loss_ta_learn)
 
     ###########################################################################
     # Plotting
-    params = dict(t_r=t_r, H=H, max_iter_z=1000, name='Ref-z',
-                  solver_type='fista-z-step', verbose=0)
+    params = dict(t_r=t_r, h=h, n_times_valid=n_times_valid, max_iter_z=10000,
+                  name='Ref-z', solver_type='fista-z-step', verbose=0)
     ta_ref = TA(**params)
 
     t0 = time.time()

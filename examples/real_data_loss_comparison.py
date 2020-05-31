@@ -15,7 +15,8 @@ import numpy as np
 from nilearn.input_data import NiftiMasker
 from carpet.utils import init_vuz
 from pyta import TA
-from pyta.hrf_model import double_gamma_hrf, make_toeplitz
+from pyta.hrf_model import double_gamma_hrf
+from pyta.convolution import make_toeplitz
 from pyta.utils import compute_lbda_max, logspace_layers
 from pyta.loss_and_grad import _obj_t_analysis
 
@@ -64,8 +65,7 @@ if __name__ == '__main__':
     # Parameters to set for the experiment
     hrf_time_frames = 30
     nx = ny = nz = 10
-    net_solver_type = 'fixed-inner-prox'
-    multi_iter = 3
+    multi_iter = 4
     lw = 7
 
     ###########################################################################
