@@ -125,8 +125,7 @@ if __name__ == '__main__':
 
     init_net_params = None
     params = dict(t_r=t_r, H=H, net_solver_training_type='recursive',
-                  net_solver_type=net_solver_type, name='Learned-z',
-                  solver_type='learn-z-step', verbose=1,
+                  name='Learned-z', solver_type='learn-z-step', verbose=1,
                   max_iter_training_net=args.max_training_iter)
 
     for i, n_layers in enumerate(all_layers):
