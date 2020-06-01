@@ -32,9 +32,12 @@ def test_rev_convolution():
     n_time_valid = 100
     n_samples = 10
     h = double_gamma_hrf(t_r, n_time_hrf)
+    H = make_toeplitz(h, n_time_valid).T
     u = np.random.randn(n_samples, n_time_valid)
     x = hu_numpy(h, u)
     h_, x_ = torch.Tensor(h), torch.Tensor(x)
+    np.testing.assert_allclose(htx_numpy(h, x), x.dot(H.T),
+                               rtol=1e-2)
     np.testing.assert_allclose(htx_numpy(h, x), htx_tensor(h_, x_).numpy(),
                                rtol=1e-2)
 
@@ -46,9 +49,12 @@ def test_hth_convolution():
     n_time_valid = 100
     n_samples = 10
     h = double_gamma_hrf(t_r, n_time_hrf)
+    H = make_toeplitz(h, n_time_valid).T
     u = np.random.randn(n_samples, n_time_valid)
     hth = np.convolve(h[::-1], h)
     hth_, u_ = torch.Tensor(hth), torch.Tensor(u)
+    np.testing.assert_allclose(hthu_numpy(hth, u), u.dot(H.dot(H.T)),
+                               rtol=1e-2)
     np.testing.assert_allclose(hthu_numpy(hth, u), hthu_tensor(hth_, u_),
                                rtol=1e-2)
 
@@ -60,9 +66,13 @@ def test_hth_id_convolution():
     n_time_valid = 100
     n_samples = 10
     h = double_gamma_hrf(t_r, n_time_hrf)
+    H = make_toeplitz(h, n_time_valid).T
     u = np.random.randn(n_samples, n_time_valid)
     hth = np.convolve(h[::-1], h)
     hth_, u_ = torch.Tensor(hth), torch.Tensor(u)
+    np.testing.assert_allclose(hth_id_u_numpy(hth, u),
+                               u - u.dot(H.dot(H.T)),
+                               rtol=1e-2)
     np.testing.assert_allclose(hth_id_u_numpy(hth, u),
                                hth_id_u_tensor(hth_, u_),
                                rtol=1e-2)

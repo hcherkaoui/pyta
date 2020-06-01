@@ -58,14 +58,10 @@ def hu_tensor(h, u):
     """
     n_time_hrf = len(h)
     padd = n_time_hrf - 1
-    n_samples, n_time_valid = u.shape
-    n_time = n_time_valid + n_time_hrf - 1
+    n_samples, _ = u.shape
     h = torch.flip(h, (0,))
-    h_conv_u = torch.empty((n_samples, n_time), dtype=u.dtype)
-    for i in range(n_samples):
-        conv_ = conv1d(u[i].view(1, 1, -1), h.view(1, 1, -1), padding=padd)
-        h_conv_u[i, :] = conv_.view(-1)
-    return h_conv_u
+    h_conv_u = conv1d(u.view(n_samples, 1, -1), h.view(1, 1, -1), padding=padd)
+    return h_conv_u.view(n_samples, -1)
 
 
 def htx_numpy(h, x):
@@ -97,15 +93,11 @@ def htx_tensor(h, x):
     ------
     h_conv_x : tensor, shape (n_samples, n_time_valid), convolved signals
     """
-    n_kernel = len(h)
     padd = 0
-    n_samples, n_time = x.shape
-    n_time_valid = n_time - n_kernel + 1
-    ht_conv_x = torch.empty((n_samples, n_time_valid), dtype=x.dtype)
-    for i in range(n_samples):
-        conv_ = conv1d(x[i].view(1, 1, -1), h.view(1, 1, -1), padding=padd)
-        ht_conv_x[i, :] = conv_.view(-1)
-    return ht_conv_x
+    n_samples, _ = x.shape
+    ht_conv_x = conv1d(x.view(n_samples, 1, -1), h.view(1, 1, -1),
+                       padding=padd)
+    return ht_conv_x.view(n_samples, -1)
 
 
 @numba.jit((numba.float64[:], numba.float64[:, :], numba.int64, numba.int64),
@@ -168,11 +160,9 @@ def hthu_tensor(hth, u):
     n_kernel = len(hth)
     padd = int((n_kernel - 1) / 2)
     n_samples, _ = u.shape
-    hth_conv_u = torch.empty_like(u)
-    for i in range(n_samples):
-        conv_ = conv1d(u[i].view(1, 1, -1), hth.view(1, 1, -1), padding=padd)
-        hth_conv_u[i, :] = conv_.view(-1)
-    return hth_conv_u
+    hth_conv_u = conv1d(u.view(n_samples, 1, -1), hth.view(1, 1, -1),
+                        padding=padd)
+    return hth_conv_u.view(n_samples, -1)
 
 
 def hth_id_u_numpy(hth, u):
