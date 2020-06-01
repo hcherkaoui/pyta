@@ -108,7 +108,8 @@ if __name__ == '__main__':
     # Main experimentation
     all_layers = logspace_layers(n_layers=10, max_depth=args.max_iter_z)
 
-    params = dict(t_r=t_r, H=H, name='Iterative-z',
+    params = dict(t_r=t_r, h=h, n_times_valid=n_times_valid,
+                  name='Iterative-z',
                   max_iter_z=int(multi_iter * args.max_iter_z),
                   solver_type='fista-z-step', verbose=1)
     ta_iter = TA(**params)
@@ -121,10 +122,11 @@ if __name__ == '__main__':
     n_samples = nx * ny * nz
     y_test_ravel = y_test.reshape(n_samples, args.n_time_frames)
     _, u0, _ = init_vuz(H, D, y_test_ravel, args.temp_reg)
-    loss_ta_learn = [_obj_t_analysis(u0, y_test_ravel, H, args.temp_reg)]
+    loss_ta_learn = [_obj_t_analysis(u0, y_test_ravel, h, args.temp_reg)]
 
     init_net_params = None
-    params = dict(t_r=t_r, H=H, net_solver_training_type='recursive',
+    params = dict(t_r=t_r, h=h, n_times_valid=n_times_valid,
+                  net_solver_training_type='recursive',
                   name='Learned-z', solver_type='learn-z-step', verbose=1,
                   max_iter_training_net=args.max_training_iter)
 
@@ -156,15 +158,15 @@ if __name__ == '__main__':
         t0 = time.time()
         _, u, _ = ta_learn.prox_t(y_test, args.temp_reg, reshape_4d=False)
         print(f"ta_learn.prox_t finished : {time.time() - t0:.2f}s")
-        loss_ta_learn.append(_obj_t_analysis(u, y_test_ravel, H,
+        loss_ta_learn.append(_obj_t_analysis(u, y_test_ravel, h,
                                              args.temp_reg))
 
     loss_ta_learn = np.array(loss_ta_learn)
 
     ###########################################################################
     # Plotting
-    params = dict(t_r=t_r, H=H, max_iter_z=1000, name='Ref-z',
-                  solver_type='fista-z-step', verbose=0)
+    params = dict(t_r=t_r, h=h, n_times_valid=n_times_valid, max_iter_z=10000,
+                  name='Ref-z', solver_type='fista-z-step', verbose=0)
     ta_ref = TA(**params)
 
     t0 = time.time()
