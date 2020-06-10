@@ -10,6 +10,15 @@ import time
 import argparse
 import json
 import pickle
+
+import matplotlib as mpl
+mpl.rcParams['pgf.texsystem'] = 'pdflatex'
+mpl.rcParams['text.usetex'] = True
+mpl.rcParams['text.latex.preamble'] = [r'\usepackage{amssymb}']
+mpl.rcParams['xtick.labelsize'] = 18
+mpl.rcParams['ytick.labelsize'] = 18
+mpl.rcParams['axes.labelsize'] = 18
+
 import matplotlib.pyplot as plt
 import numpy as np
 from carpet.utils import init_vuz
@@ -38,6 +47,9 @@ if __name__ == '__main__':
     parser.add_argument('--n-time-frames', type=int, default=100,
                         help='Number of timeframes to retain from the the '
                         'data fMRI.')
+    parser.add_argument('--iter-mult', type=float, default='2.0',
+                        help='Multiplicative coefficient to obtain the number'
+                        ' of iteration.')
     parser.add_argument('--plots-dir', type=str, default='outputs',
                         help='Outputs directory for plots')
     parser.add_argument('--seed', type=int, default=None,
@@ -67,8 +79,7 @@ if __name__ == '__main__':
     ###########################################################################
     # Parameters to set for the experiment
     hrf_time_frames = 30
-    nx = ny = nz = 10
-    multi_iter = 10
+    nx = ny = nz = 3
     lw = 7
 
     ###########################################################################
@@ -107,7 +118,7 @@ if __name__ == '__main__':
 
     params = dict(t_r=t_r, h=h, n_times_valid=n_times_valid,
                   name='Iterative-z',
-                  max_iter_z=int(multi_iter * args.max_iter_z),
+                  max_iter_z=int(args.iter_mult * args.max_iter_z),
                   solver_type='fista-z-step', verbose=1)
     ta_iter = TA(**params)
 
@@ -175,16 +186,15 @@ if __name__ == '__main__':
     eps = 1.0e-20
 
     plt.figure(f"[{__file__}] Loss functions", figsize=(6, 3))
-    xx = np.arange(start=0, stop=int(multi_iter * args.max_iter_z + 1))
+    xx = np.arange(start=0, stop=int(args.iter_mult * args.max_iter_z + 1))
     plt.semilogy(xx, loss_ta_iter - min_loss, lw=lw, label='Analysis FISTA')
     plt.semilogy(all_layers, loss_ta_learn - min_loss, lw=lw,
                  label='Analysis LPGD - taut-string')
     plt.legend(bbox_to_anchor=(0.0, 1.02, 1.0, 0.2), loc="lower left",
-               mode="expand", borderaxespad=0, ncol=1, fontsize=14)
+               mode="expand", borderaxespad=0, ncol=1, fontsize=18)
     plt.grid()
-    plt.xlabel("Iterations [-]", fontsize=15)
-    plt.ylabel('$F(.) - F(u^*)$', fontsize=15)
-
+    plt.xlabel("Layers $t$")
+    plt.ylabel(r'$\mathbb E \left[P_x(u^{(t)}) - P_x(u^{*}) \right]$')
     plt.tight_layout()
 
     filename = os.path.join(args.plots_dir, "loss_comparison.pdf")
